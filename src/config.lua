@@ -1,5 +1,6 @@
 -- Valores compartidos del juego. Son faciles de modificar.
 return {
+    ECS_ASSIGNMENT_MODE = false, -- true: mensaje y cierre al tocar un lateral.
     WIDTH = 960,
     HEIGHT = 640,
     STARTING_LIVES = 3,
@@ -13,6 +14,7 @@ return {
     BALL_START_VX = 195, -- Pixeles por segundo.
     BALL_START_VY = -280,
     PADDLE_SPEED_MULTIPLIER = 1.08,
+    WALL_SPEED_MULTIPLIER = 1.08,
     MAX_BALLS = 30,
     MULTIBALL_SPREAD_DEGREES = 25,
 

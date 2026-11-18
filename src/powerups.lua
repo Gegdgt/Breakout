@@ -1,71 +1,76 @@
--- Objetos que caen: generacion, movimiento, recoleccion y dibujado.
+-- Sistema de poderes: fabrica, sorteo, caida, recoleccion y MULTIBALL.
+local Components = require("src.ecs.components")
 local Collision = require("src.collision")
-
+local Movement = require("src.ecs.systems.movement_system")
+local Ball = require("src.ball")
 local Powerups = {}
-Powerups.__index = Powerups
 Powerups.MULTIBALL = "multiball"
 
-local types = {
-    [Powerups.MULTIBALL] = {
-        name = "MULTIBALL x3",
-        label = "x3",
-        color = {0.98, 0.81, 0.35},
-    },
-}
-
-function Powerups.new(config)
-    return setmetatable({items = {}, config = config}, Powerups)
+function Powerups.spawn(world, config, kind, centerX, centerY)
+    assert(kind == Powerups.MULTIBALL, "Tipo de power-up desconocido")
+    local renderable = Components.renderable({0.98, 0.81, 0.35}, 3, 20)
+    renderable.label = "x3"
+    renderable.labelColor = {0.08, 0.10, 0.14}
+    return world:create({
+        Position = Components.position(centerX - config.POWERUP_W / 2, centerY - config.POWERUP_H / 2),
+        Velocity = Components.velocity(0, config.POWERUP_FALL_SPEED),
+        Collider = Components.collider(config.POWERUP_W, config.POWERUP_H),
+        Renderable = renderable,
+        PowerUp = Components.powerUp(kind, "MULTIBALL x3"),
+    })
 end
 
-function Powerups:spawn(kind, centerX, centerY)
-    local definition = assert(types[kind], "Tipo de power-up desconocido")
-    local item = {
-        kind = kind,
-        name = definition.name,
-        x = centerX - self.config.POWERUP_W / 2,
-        y = centerY - self.config.POWERUP_H / 2,
-        w = self.config.POWERUP_W,
-        h = self.config.POWERUP_H,
-        vy = self.config.POWERUP_FALL_SPEED,
-    }
-    self.items[#self.items + 1] = item
-    return item
-end
-
-function Powerups:trySpawn(brick)
-    if love.math.random() < self.config.POWERUP_DROP_CHANCE then
-        return self:spawn(Powerups.MULTIBALL,
-                          brick.x + brick.w / 2, brick.y + brick.h / 2)
+function Powerups.trySpawn(world, config, position, collider, chance)
+    if love.math.random() < chance then
+        return Powerups.spawn(world, config, Powerups.MULTIBALL,
+            position.x + collider.w / 2, position.y + collider.h / 2)
     end
 end
 
-function Powerups:update(dt, paddle)
-    local collected = {}
-    -- Recorrer al reves permite retirar objetos sin saltarse el siguiente.
-    for index = #self.items, 1, -1 do
-        local item = self.items[index]
-        item.y = item.y + item.vy * dt
-        if Collision.overlaps(item, paddle) then
-            table.remove(self.items, index)
-            collected[#collected + 1] = item
-        elseif item.y >= self.config.HEIGHT then
-            table.remove(self.items, index)
+function Powerups.activate(game, kind)
+    if game.state ~= "playing" or game.quitRequested then return end
+    if kind == Powerups.MULTIBALL then
+        local world, config = game.world, game.config
+        local originals = world:query("Ball", "Position", "Velocity", "Collider")
+        local angle = math.rad(config.MULTIBALL_SPREAD_DEGREES)
+        -- Instantanea: las copias no se vuelven a multiplicar en este recorrido.
+        for _, id in ipairs(originals) do
+            if world:has(id, "Ball") then
+                for direction = -1, 1, 2 do
+                    if world:count("Ball") >= config.MAX_BALLS then return end
+                    Ball.cloneRotated(world, id, direction * angle, config)
+                end
+            end
         end
     end
-    return collected
 end
 
-function Powerups:draw(font)
-    love.graphics.setFont(font)
-    for _, item in ipairs(self.items) do
-        local definition = types[item.kind]
-        love.graphics.setColor(definition.color)
-        love.graphics.rectangle("fill", item.x, item.y, item.w, item.h, 3, 3)
-        love.graphics.setColor(0.08, 0.10, 0.14)
-        love.graphics.printf(definition.label, item.x,
-                             item.y + (item.h - font:getHeight()) / 2,
-                             item.w, "center")
+function Powerups.update(game, dt)
+    local world, config = game.world, game.config
+    local collected = {}
+    local paddles = world:query("PaddleControl", "Position", "Collider")
+    local powers = world:query("PowerUp", "Position", "Velocity", "Collider")
+    for index = #powers, 1, -1 do
+        local id = powers[index]
+        if world:has(id, "PowerUp") then
+            Movement.step(world, id, dt)
+            local position = world:get(id, "Position")
+            local collider = world:get(id, "Collider")
+            local pickedUp = false
+            for _, paddle in ipairs(paddles) do
+                if world:has(paddle, "PaddleControl") and Collision.overlaps(
+                    position, collider, world:get(paddle, "Position"), world:get(paddle, "Collider")) then
+                    collected[#collected + 1] = world:get(id, "PowerUp").kind
+                    world:destroy(id)
+                    pickedUp = true
+                    break
+                end
+            end
+            if not pickedUp and position.y >= config.HEIGHT then world:destroy(id) end
+        end
     end
+    -- Resolver todas las recogidas antes de crear pelotas, como en el juego original.
+    for _, kind in ipairs(collected) do Powerups.activate(game, kind) end
 end
 
 return Powerups

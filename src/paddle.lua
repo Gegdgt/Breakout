@@ -1,36 +1,33 @@
+-- Fabrica de paddle y sistema de entrada horizontal.
+local Components = require("src.ecs.components")
+local Movement = require("src.ecs.systems.movement_system")
 local Paddle = {}
-Paddle.__index = Paddle
 
-function Paddle.new(config)
-    local self = setmetatable({}, Paddle)
-    self.x = (config.WIDTH - config.PADDLE_W) / 2
-    self.y = config.PADDLE_Y
-    self.w = config.PADDLE_W
-    self.h = config.PADDLE_H
-    self.speed = config.PADDLE_SPEED
-    self.screenWidth = config.WIDTH
-    return self
+function Paddle.spawn(world, config)
+    local renderable = Components.renderable({0.78, 0.83, 0.88}, 5, 30)
+    renderable.borderColor = {0.44, 0.52, 0.60}
+    return world:create({
+        Position = Components.position((config.WIDTH - config.PADDLE_W) / 2, config.PADDLE_Y),
+        Velocity = Components.velocity(0, 0),
+        Collider = Components.collider(config.PADDLE_W, config.PADDLE_H),
+        Renderable = renderable,
+        PaddleControl = Components.paddleControl(config),
+    })
 end
 
-function Paddle:update(dt)
-    local direction = 0
-    if love.keyboard.isDown("left", "a") then
-        direction = direction - 1
+function Paddle.update(world, config, dt)
+    for _, id in ipairs(world:query("PaddleControl", "Position", "Velocity", "Collider")) do
+        local control = world:get(id, "PaddleControl")
+        local position = world:get(id, "Position")
+        local velocity = world:get(id, "Velocity")
+        local collider = world:get(id, "Collider")
+        local direction = 0
+        if love.keyboard.isDown(unpack(control.leftKeys)) then direction = direction - 1 end
+        if love.keyboard.isDown(unpack(control.rightKeys)) then direction = direction + 1 end
+        velocity.vx, velocity.vy = direction * control.speed, 0
+        Movement.step(world, id, dt)
+        position.x = math.max(0, math.min(position.x, config.WIDTH - collider.w))
     end
-    if love.keyboard.isDown("right", "d") then
-        direction = direction + 1
-    end
-
-    -- Movimiento time-based: velocidad (px/s) por tiempo transcurrido (s).
-    self.x = self.x + direction * self.speed * dt
-    self.x = math.max(0, math.min(self.x, self.screenWidth - self.w))
-end
-
-function Paddle:draw()
-    love.graphics.setColor(0.78, 0.83, 0.88)
-    love.graphics.rectangle("fill", self.x, self.y, self.w, self.h, 5, 5)
-    love.graphics.setColor(0.44, 0.52, 0.60)
-    love.graphics.rectangle("line", self.x, self.y, self.w, self.h, 5, 5)
 end
 
 return Paddle
