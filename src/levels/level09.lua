@@ -1,0 +1,15 @@
+return require("src.levels.definition").make({
+    stars = {twoScore = 11000, threeScore = 17000, minLives = 3},
+    id = "caos_total", name = "Caos total",
+    rows = {"AEMG....GMEA", "RN.RN..NR.NR", ".GG.EAAE.GG.",
+            "M..N....N..M", ".EE.R..R.EE.", "R..MG..GM..R", "..AE....EA.."},
+    initialVelocity = {vx = 235, vy = -337},
+    difficulty = {rank = 9, label = "Muy alta", dropChance = 0.15,
+                  guaranteedPowerup = {kind = "fireball", everySeconds = 10}},
+    powerups = {"multiball", "giant_paddle", "shield", "fireball", "laser", "magnet", "extra_life"},
+    obstacles = {{id = "chaos_gate", x = 425, y = 370, w = 110, h = 14,
+                  motion = {pattern = "horizontal", amplitude = 180, period = 5}}},
+    portals = {{id = "chaos_pair", cooldown = 0.4, rotationDegrees = -90,
+                entry = {x = 100, y = 370, radius = 22}, exit = {x = 480, y = 125, radius = 22}}},
+    background = {0.10, 0.04, 0.045}, primary = {1, 0.33, 0.32},
+})

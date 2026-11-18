@@ -11,6 +11,16 @@ function love.load()
         Config.ECS_ASSIGNMENT_MODE = false
         local success, count = xpcall(function()
             return require("tests.game_spec").run(root) + require("tests.ecs_spec").run()
+                + require("tests.levels_spec").run() + require("tests.progress_spec").run()
+                + require("tests.special_bricks_spec").run()
+                + require("tests.powers_portals_spec").run()
+                + require("tests.score_spec").run(root)
+                + require("tests.boss_spec").run()
+                + require("tests.interface_spec").run(root)
+                + require("tests.feedback_spec").run(root)
+                + require("tests.sprint_spec").run()
+                + require("tests.boss_balance_spec").run()
+                + require("tests.life_effects_spec").run()
         end, debug.traceback)
         Config.ECS_ASSIGNMENT_MODE = selectedMode
         if not success then error(count, 0) end

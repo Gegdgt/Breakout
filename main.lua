@@ -14,10 +14,14 @@ function love.draw()
     game:draw()
 end
 
-function love.keypressed(key)
-    if key == "escape" then
-        love.event.quit()
-    elseif key == "r" and (game.state == "won" or game.state == "lost") then
-        game:reset()
-    end
+function love.keypressed(key, scancode, isrepeat)
+    game:keypressed(key, isrepeat)
+end
+
+function love.focus(focused)
+    game:focus(focused)
+end
+
+function love.quit()
+    if game then game:quit() end
 end

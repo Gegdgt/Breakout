@@ -1,0 +1,15 @@
+return require("src.levels.definition").make({
+    stars = {twoScore = 9000, threeScore = 14000, minLives = 3},
+    id = "precision_extrema", name = "Precisión extrema",
+    rows = {"AE.G....G.EA", ".M.EA..AE.M.", "..G..MM..G..",
+            "...AE..EA...", "..M..GG..M..", ".G.EA..AE.G.", "N..........N"},
+    initialVelocity = {vx = 230, vy = -330},
+    difficulty = {rank = 8, label = "Alta", dropChance = 0.15,
+                  guaranteedPowerup = {kind = "fireball", everySeconds = 12}},
+    powerups = {"multiball", "giant_paddle", "shield", "fireball", "laser", "magnet", "extra_life"},
+    obstacles = {{id = "left_gate", x = 220, y = 350, w = 95, h = 14,
+                  motion = {pattern = "vertical", amplitude = 40, period = 5}},
+                 {id = "right_gate", x = 645, y = 350, w = 95, h = 14,
+                  motion = {pattern = "vertical", amplitude = 40, period = 5, phase = 0.5}}},
+    background = {0.10, 0.05, 0.075}, primary = {1, 0.42, 0.64},
+})

@@ -3,6 +3,7 @@ local World = require("src.ecs.world")
 local Components = require("src.ecs.components")
 local Config = require("src.config")
 local Powerups = require("src.powerups")
+local CollisionSystem = require("src.ecs.systems.collision_system")
 local Helpers = require("tests.helpers")
 local balls, paddle = Helpers.balls, Helpers.paddle
 
@@ -45,7 +46,7 @@ local function run()
 
     local ok, err = xpcall(function()
         test("IDs unicos, componentes de datos independientes y limpieza al reiniciar", function()
-            local game = Game.new()
+            local game = Helpers.newGame()
             local world = game.world
             assert(world:count() == 74 and world:count("Brick") == 72)
             assert(world:count("Position", "Collider", "Renderable") == 74)
@@ -70,7 +71,7 @@ local function run()
             originals[2].position.x = 17
             assert(originals[1].position.x ~= 17 and originals[3].position.x ~= 17)
             local oldIds, lastId = world:query(), world.nextId
-            game:reset()
+            game:reset(); Helpers.finishIntro(game)
             assert(game.world == world and world:count() == 74)
             for _, id in ipairs(oldIds) do
                 assert(not world:has(id) and world:get(id, "Position") == nil)
@@ -102,7 +103,7 @@ local function run()
 
         test("Flechas y A/D, eje horizontal, limites y teclas opuestas", function()
             for _, key in ipairs({"left", "a", "right", "d"}) do
-                local game = Game.new()
+                local game = Helpers.newGame()
                 local player = paddle(game)
                 local x, y = player.position.x, player.position.y
                 local direction = (key == "left" or key == "a") and -1 or 1
@@ -124,7 +125,7 @@ local function run()
         end)
 
         test("Igual desplazamiento con dt dividido para paddle, pelota y poder", function()
-            local coarse, fine = Game.new(), Game.new()
+            local coarse, fine = Helpers.newGame(), Helpers.newGame()
             for _, game in ipairs({coarse, fine}) do
                 Powerups.spawn(game.world, Config, Powerups.MULTIBALL, 100, 400)
             end
@@ -144,7 +145,7 @@ local function run()
         end)
 
         test("Paddle separa la pelota y no acelera dos veces el mismo contacto", function()
-            local game = Game.new()
+            local game = Helpers.newGame()
             local ball, player = balls(game)[1], paddle(game)
             ball.position.x = player.position.x + (player.collider.w - ball.collider.w) / 2
             ball.position.y = player.position.y - ball.collider.h + 1
@@ -182,7 +183,7 @@ local function run()
                 for _, mode in ipairs({false, true}) do
                     Config.ECS_ASSIGNMENT_MODE = mode
                     for _, incomingX in ipairs({-195, 0, 195}) do
-                        local game = Game.new()
+                        local game = Helpers.newGame()
                         local ball, player = balls(game)[1], paddle(game)
                         ball.velocity.vx, ball.velocity.vy = incomingX, 280
                         ball.position.x = player.position.x + player.collider.w / 2
@@ -200,7 +201,7 @@ local function run()
         end
 
         test("Rebote progresivo usa los centros y anchos actuales de los colliders", function()
-            local game = Game.new()
+            local game = Helpers.newGame()
             local ball, player = balls(game)[1], paddle(game)
             player.collider.w, ball.collider.w = 160, 19
             local previousX
@@ -224,7 +225,7 @@ local function run()
 
         test("Impactos con el centro fuera del paddle se limitan a 60 grados", function()
             for _, side in ipairs({-1, 1}) do
-                local game = Game.new()
+                local game = Helpers.newGame()
                 local ball, player = balls(game)[1], paddle(game)
                 local edge = player.position.x + (side == 1 and player.collider.w or 0)
                 ball.position.x = edge + side * (ball.collider.w / 2 - 1) - ball.collider.w / 2
@@ -239,7 +240,7 @@ local function run()
         end)
 
         test("MULTIBALL x3 rebota simultaneamente con direcciones y rapidez independientes", function()
-            local game = Game.new()
+            local game = Helpers.newGame()
             game:activatePowerup(Powerups.MULTIBALL)
             local active, player = balls(game), paddle(game)
             local impacts, directions = {-0.75, 0, 0.75}, {-math.sqrt(0.5), 0, math.sqrt(0.5)}
@@ -270,7 +271,7 @@ local function run()
 
         test("Paredes normales: contacto exacto, mayor rapidez y sin rebotes repetidos", function()
             for _, side in ipairs({"left", "right", "top"}) do
-                local game = Game.new()
+                local game = Helpers.newGame()
                 local ball = balls(game)[1]
                 ball.position.x, ball.position.y = 400, 400
                 ball.velocity.vx, ball.velocity.vy = -195, -280
@@ -296,7 +297,7 @@ local function run()
                 for _, touchingIndex in ipairs({1, 2, 3}) do
                     for _, dt in ipairs({0, 0.01}) do
                         quits, messages = 0, {}
-                        local game = Game.new()
+                        local game = Helpers.newGame()
                         Helpers.setBallCount(game, 3)
                         local ball = balls(game)[touchingIndex]
                         local left = side == "izquierda"
@@ -322,7 +323,7 @@ local function run()
 
         test("Entrega ECS conserva rebote superior y vidas al caer sin tocar laterales", function()
             Config.ECS_ASSIGNMENT_MODE = true
-            local game = Game.new()
+            local game = Helpers.newGame()
             local ball = balls(game)[1]
             ball.position.x, ball.position.y = 400, 0
             ball.velocity.vy = -280
@@ -333,8 +334,89 @@ local function run()
             assert(game.lives == 2 and game.world:count("Ball") == 1 and quits == 0)
         end)
 
+        test("Consultas acotadas con 90 pelotas para colisiones y MULTIBALL", function()
+            for _, count in ipairs({1, Config.MAX_BALLS}) do
+                local game = Helpers.newGame()
+                Helpers.setBallCount(game, count)
+                local calls, query = 0, game.world.query
+                game.world.query = function(world, ...)
+                    calls = calls + 1
+                    return query(world, ...)
+                end
+                CollisionSystem.update(game, 0)
+                assert(calls <= 4, "Una consulta por tipo: pelotas, paddles, bloques y obstaculos")
+            end
+            local game = Helpers.newGame()
+            Helpers.setBallCount(game, 81)
+            local calls, query = 0, game.world.query
+            game.world.query = function(world, ...)
+                calls = calls + 1
+                return query(world, ...)
+            end
+            game:activatePowerup(Powerups.MULTIBALL)
+            assert(calls <= 2, "Calcular capacidad una sola vez, no contar por cada copia")
+            assert(game.world:count("Ball") == Config.MAX_BALLS)
+        end)
+
+        test("Entrega ECS con 90 pelotas: ambos laterales cierran sin rebote ni descuento", function()
+            Config.ECS_ASSIGNMENT_MODE = true
+            for _, side in ipairs({"izquierda", "derecha"}) do
+                for _, touchingIndex in ipairs({1, 45, Config.MAX_BALLS}) do
+                    quits, messages = 0, {}
+                    local game = Helpers.newGame()
+                    Helpers.setBallCount(game, Config.MAX_BALLS)
+                    local ball = balls(game)[touchingIndex]
+                    ball.position.x = side == "izquierda" and 0 or Config.WIDTH - ball.collider.w
+                    ball.position.y = 400
+                    ball.velocity.vx = side == "izquierda" and -330 or 330
+                    ball.velocity.vy = -440
+                    local vx, vy = ball.velocity.vx, ball.velocity.vy
+                    game:update(0)
+                    assert(quits == 1 and game.quitRequested and #messages == 1)
+                    assert(messages[1] == "ECS: pelota toco la pared " .. side)
+                    assert(ball.velocity.vx == vx and ball.velocity.vy == vy)
+                    assert(game.lives == 3 and game.remaining == 72 and game.world:count("Ball") == Config.MAX_BALLS)
+                    game:update(0.01)
+                    assert(quits == 1)
+                end
+            end
+        end)
+
+        test("90 pelotas a maxima rapidez: 120 frames y Canvas real sin crear fuentes", function()
+            local game = Helpers.newGame()
+            Helpers.setBallCount(game, Config.MAX_BALLS)
+            local active = balls(game)
+            local canvas = love.graphics.newCanvas(Config.WIDTH, Config.HEIGHT)
+            local realNewFont, label = love.graphics.newFont, false
+            love.graphics.newFont = function() error("No crear fuentes durante update/draw") end
+            love.graphics.printf = function(value, ...)
+                if value == "Pelotas: " .. Config.MAX_BALLS .. " / " .. Config.MAX_BALLS then label = true end
+                return realPrintf(value, ...)
+            end
+            local success, err = xpcall(function()
+                for _ = 1, 120 do
+                    for index, ball in ipairs(active) do
+                        ball.position.x, ball.position.y = 20 + (index * 37) % 880, 350 + (index * 13) % 150
+                        ball.velocity.vx, ball.velocity.vy = 330, -440
+                        if index % 10 == 0 then ball.position.x, ball.velocity.vx = 0, -330 end
+                    end
+                    game:update(1 / 60)
+                    love.graphics.setCanvas(canvas)
+                    game:draw()
+                    love.graphics.setCanvas()
+                    assert(game.world:count("Ball") == Config.MAX_BALLS and game.lives == 3 and game.remaining == 72)
+                    for _, ball in ipairs(active) do assert(near(speed(ball), Config.BALL_MAX_SPEED)) end
+                end
+                assert(label, "HUD muestra 90 / 90 desde Config")
+            end, debug.traceback)
+            love.graphics.setCanvas()
+            love.graphics.newFont, love.graphics.printf = realNewFont, realPrintf
+            canvas:release()
+            assert(success, err)
+        end)
+
         test("Dibujo real en Canvas: contadores, x3 y mensajes de victoria/derrota", function()
-            local game = Game.new()
+            local game = Helpers.newGame()
             Powerups.spawn(game.world, Config, Powerups.MULTIBALL, 100, 400)
             local text = {}
             love.graphics.print = function(value, ...)
@@ -346,17 +428,20 @@ local function run()
                 return realPrintf(value, ...)
             end
             local canvas = love.graphics.newCanvas(Config.WIDTH, Config.HEIGHT)
-            for _, state in ipairs({"playing", "won", "lost"}) do
+            for _, state in ipairs({"playing", "campaign_complete", "game_over"}) do
                 game.state = state
                 text = {}
                 love.graphics.setCanvas(canvas)
                 game:draw()
                 love.graphics.setCanvas()
-                assert(text["Vidas: 3"] and text["Pelotas: 1 / 30"] and text["Bloques restantes: 72"] and text.x3)
+                assert(text["Vidas: 3"] and text["Pelotas: 1 / " .. Config.MAX_BALLS]
+                    and text["Bloques restantes: 72"] and text.x3)
                 if state == "playing" then
                     assert(not text["YOU WIN!"] and not text["GAME OVER"])
                 else
-                    assert(text[state == "won" and "YOU WIN!" or "GAME OVER"] and text["Presiona R para volver a jugar"])
+                    assert(text[state == "campaign_complete" and "YOU WIN!" or "GAME OVER"] and text[state == "campaign_complete"
+                        and "Campaña completada — 10 niveles superados"
+                        or "R: reiniciar este nivel   |   M: menú"])
                 end
                 local pixels = canvas:newImageData()
                 local r, g, b = pixels:getPixel(45, 95)

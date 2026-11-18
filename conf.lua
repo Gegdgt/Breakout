@@ -4,7 +4,7 @@ function love.conf(t)
     t.version = "11.5"
     t.console = true  -- Mostrar mensajes print() en Windows.
 
-    t.window.title = "Breakout - Engine base"
+    t.window.title = "Breakout Arcade"
     t.window.width = 960
     t.window.height = 640
     t.window.resizable = false
