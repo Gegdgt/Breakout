@@ -17,11 +17,11 @@ local function destroy(game) return Bricks.destroy(game, first(game)) end
 local function clear(game)
     for _, id in ipairs(game.world:query("Brick")) do Bricks.destroy(game, id) end
 end
-local function add(game, kind, x, y, health)
+local function add(game, kind, x, y, health, row, column)
     local spec = game.level.brickTypes[kind]
     if health then spec = {kind = "resistant", health = health} end
     return Bricks.spawn(game.world, Config, game.level, {key = "fixture", x = x or 100, y = y or 200,
-        w = 60, h = 25, color = {1, 0.3, 0.3}, definition = spec})
+        w = 60, h = 25, color = {1, 0.3, 0.3}, definition = spec, row = row, column = column})
 end
 local function fixture()
     local game = Helpers.newGame()
@@ -126,7 +126,9 @@ local function run(root)
         test("Cadena de 90 explosivos: puntos y combo una vez por entidad con eventos diferidos", function()
             local game = fixture()
             local ids = {}
-            for n = 1, 90 do ids[n] = add(game, "E", 100 + n % 9, 200 + n % 10) end
+            for n = 1, 90 do
+                ids[n] = add(game, "E", 100 + n % 9, 200 + n % 10, nil, math.floor((n - 1) / 9) + 1, (n - 1) % 9 + 1)
+            end
             local budget = Config.MAX_EXPLOSIONS_PER_UPDATE
             Config.MAX_EXPLOSIONS_PER_UPDATE = 2
             local success, failure = xpcall(function()
@@ -309,6 +311,7 @@ local function run(root)
                 for _, id in ipairs(game.world:query("Brick")) do
                     local brick = game.world:get(id, "Brick")
                     if brick then
+                        Helpers.waitForGhost(game, id)
                         for _ = 1, 4 do
                             if game.world:has(id) then Damage.hit(game, id, 1, "fireball") end
                         end

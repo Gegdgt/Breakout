@@ -20,7 +20,7 @@ end
 function Components.paddleControl(config)
     return {speed = config.PADDLE_NORMAL_SPEED or config.PADDLE_SPEED,
             sprintMultiplier = config.PADDLE_SPRINT_MULTIPLIER or 1, sprinting = false,
-            leftKeys = {"left", "a"}, rightKeys = {"right", "d"}}
+            leftKeys = {unpack(config.CONTROLS.left)}, rightKeys = {unpack(config.CONTROLS.right)}}
 end
 
 function Components.ball(config)
@@ -46,12 +46,14 @@ end
 function Components.brickBehavior(definition)
     local vulnerable = {}
     for _, source in ipairs(definition.vulnerableTo or {}) do vulnerable[source] = true end
-    return {kind = definition.kind, radius = definition.radius, damage = definition.damage,
+    return {kind = definition.kind, damage = definition.damage,
             vulnerableTo = vulnerable}
 end
 
 function Components.ghost(definition)
-    return {elapsed = 0, solid = true, waiting = false, warning = false,
+    local elapsed = definition.offset or 0
+    return {elapsed = elapsed, solid = elapsed % (definition.solidSeconds + definition.intangibleSeconds) < definition.solidSeconds,
+            waiting = false, warning = false,
             solidSeconds = definition.solidSeconds, intangibleSeconds = definition.intangibleSeconds,
             warningSeconds = definition.warningSeconds}
 end

@@ -17,7 +17,8 @@ local function near(a, b) return math.abs(a - b) < 0.00001 end
 local function speed(ball) return math.sqrt(ball.velocity.vx^2 + ball.velocity.vy^2) end
 local function addBrick(game, kind, x, y, w, h, definition)
     return Bricks.spawn(game.world, Config, game.level, {key = "fixture", x = x, y = y, w = w or 60, h = h or 25,
-        color = {1, 0.3, 0.3}, definition = definition or game.level.brickTypes[kind]})
+        color = {1, 0.3, 0.3}, definition = definition or game.level.brickTypes[kind],
+        row = math.floor((y - 200) / 30) + 1, column = math.floor((x - 100) / 70) + 1})
 end
 local function empty()
     local game = Helpers.newGame()

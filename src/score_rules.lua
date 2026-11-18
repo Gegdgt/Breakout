@@ -26,9 +26,11 @@ function Rules.prepare(level, config)
         and config.COMBO_PULSE_SECONDS < math.huge, "Duracion de pulso invalida")
     local values, base = {}, 0
     for _, brick in ipairs(level.bricks) do
-        local value = config.SCORE_VALUES[brick.definition.kind]
-        assert(integer(value, 1) and value <= config.SCORE_MAX, "Puntos de bloque invalidos")
-        values[#values + 1], base = value, base + value
+        if brick.definition.kind ~= "unbreakable" then
+            local value = config.SCORE_VALUES[brick.definition.kind]
+            assert(integer(value, 1) and value <= config.SCORE_MAX, "Puntos de bloque invalidos")
+            values[#values + 1], base = value, base + value
+        end
     end
     -- Cota maxima con una cadena completa y los bloques mas valiosos al final.
     -- El jefe se premia una vez; los protectores renovables no aportan puntos.

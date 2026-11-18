@@ -3,6 +3,7 @@ local Interface = require("src.ecs.systems.interface_system")
 local ScoreRender = require("src.ecs.systems.score_render_system")
 local BossRender = require("src.ecs.systems.boss_render_system")
 local Audio = require("src.ecs.systems.audio_system")
+local Encyclopedia = require("src.ui.encyclopedia")
 local Screen = {}
 local normal = {0.93, 0.96, 0.99}
 local muted = {0.64, 0.72, 0.80}
@@ -48,7 +49,7 @@ end
 local function menu(game)
     text(game, "BREAKOUT ARCADE", 91, game.messageFont, game.level.theme.primary)
     text(game, game.levels:count() .. " niveles · 2 jefes · Una campaña arcade", 155, game.font, muted)
-    for i, label in ipairs(Interface.menuItems) do row(game, label, i, 300, 220 + (i - 1) * 56, 360, 44) end
+    for i, label in ipairs(Interface.menuItems) do row(game, label, i, 300, 220 + (i - 1) * 50, 360, 44) end
     ScoreRender.menu(game)
     text(game, "C: jugar nivel " .. game.progress.maxUnlocked .. " — " .. game.levels.levels[game.progress.maxUnlocked].name,
         565, game.effectFont, muted)
@@ -110,6 +111,7 @@ local function options(game)
 end
 
 function Screen.fullscreen(game)
+    if game.state == "encyclopedia" then Encyclopedia.draw(game); return true end
     if game.state ~= "menu" and game.state ~= "level_select" and game.state ~= "options" then return false end
     love.graphics.push()
     love.graphics.translate(0, -(1 - ease(game)) * 12)
@@ -148,7 +150,7 @@ local function intro(game)
         love.graphics.printf(tostring(seconds), -80, -24, 160, "center")
         love.graphics.pop()
     end
-    text(game, game.level.boss and "Golpea el punto débil para vencer al jefe." or "Destruye todos los bloques para avanzar.",
+    text(game, game.level.boss and "Ataca el núcleo superior o el punto débil frontal." or "Destruye los bloques rompibles para avanzar.",
         421, game.font, muted)
     love.graphics.pop()
     text(game, "ESC / P: pausa     M: menú", 620, game.effectFont, muted)

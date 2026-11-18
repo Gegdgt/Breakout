@@ -7,7 +7,7 @@ return require("src.levels.definition").make({
     difficulty = {rank = 5, label = "Jefe intermedio", dropChance = 0.15},
     powerups = {"multiball", "giant_paddle", "shield", "fireball", "laser", "magnet"},
     boss = {id = "mechanical_guardian", x = 400, y = 100, w = 160, h = 60,
-            health = 20, motion = {pattern = "horizontal", amplitude = 160, period = 6},
+            health = 10, motion = {pattern = "horizontal", amplitude = 160, period = 6},
             weakPoint = {x = 52, y = 40, w = 56, h = 20}, protectorType = "resistant"},
     background = {0.065, 0.075, 0.10}, primary = {0.91, 0.70, 0.31},
 })

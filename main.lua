@@ -22,6 +22,9 @@ function love.focus(focused)
     game:focus(focused)
 end
 
+function love.mousepressed(x, y, button) game:mousepressed(x, y, button) end
+function love.wheelmoved(x, y) game:wheelmoved(x, y) end
+
 function love.quit()
     if game then game:quit() end
 end

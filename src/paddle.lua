@@ -33,7 +33,7 @@ function Paddle.resetPosition(world, config, id, level)
 end
 
 function Paddle.update(world, config, dt)
-    local shiftDown = love.keyboard.isDown("lshift", "rshift")
+    local shiftDown = love.keyboard.isDown(unpack(config.CONTROLS.sprint))
     for _, id in ipairs(world:query("PaddleControl", "Position", "Velocity", "Collider")) do
         local control = world:get(id, "PaddleControl")
         local position = world:get(id, "Position")

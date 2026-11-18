@@ -25,6 +25,7 @@ local Feedback = require("src.feedback")
 local FeedbackSystem = require("src.ecs.systems.feedback_system")
 local Particles = require("src.ecs.systems.particle_system")
 local Audio = require("src.ecs.systems.audio_system")
+local Controls = require("src.controls")
 
 local Game = {}
 Game.__index = Game
@@ -159,11 +160,14 @@ end
 
 function Game:keypressed(key, isrepeat)
     local handled = Interface.keypressed(self, key, isrepeat)
-    if not handled and key == "space" and self.state == "playing" then
+    if not handled and Controls.matches(self.config, "action", key) and self.state == "playing" then
         if not Effects.release(self) then Projectiles.fire(self) end
     end
     FeedbackSystem.flush(self)
 end
+
+function Game:mousepressed(x, y, button) Interface.mousepressed(self, x, y, button) end
+function Game:wheelmoved(x, y) Interface.wheelmoved(self, x, y) end
 
 function Game:focus(focused)
     if not focused then State.pause(self) end

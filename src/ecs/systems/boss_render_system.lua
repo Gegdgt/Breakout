@@ -33,6 +33,15 @@ function Render.body(game, id)
     if open then love.graphics.setColor(0.3, 1, 0.65)
     else love.graphics.setColor(0.38, 0.43, 0.5) end
     love.graphics.rectangle("fill", p.x + weak.x, p.y + weak.y, weak.w, weak.h, 3, 3)
+    local top = world:get(id, "BossBehavior").topWeakPoint
+    love.graphics.setColor(open and {0.35, 0.85, 1} or {0.38, 0.43, 0.5})
+    love.graphics.rectangle("fill", p.x + top.x, p.y, top.w, top.h, 3, 3)
+    love.graphics.setColor(0.8, 0.95, 1, 0.8)
+    love.graphics.rectangle("line", p.x + top.x, p.y, top.w, top.h, 3, 3)
+    if boss.flash > 0 and boss.hitZone == "top" then
+        love.graphics.setColor(1, 1, 1, boss.flash / game.config.BOSS_HIT_FLASH)
+        love.graphics.rectangle("fill", p.x + top.x - 2, p.y - 2, top.w + 4, top.h + 4, 3, 3)
+    end
     love.graphics.setFont(game.effectFont)
     love.graphics.setColor(0.05, 0.1, 0.12)
     love.graphics.printf(open and "GOLPEA" or "CERRADO", p.x + weak.x, p.y + weak.y + 3, weak.w, "center")

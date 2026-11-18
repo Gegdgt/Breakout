@@ -4,11 +4,11 @@ local Feedback = require("src.feedback")
 local Portals = {}
 
 function Portals.create(world, level)
-    for _, pair in ipairs(level.portals) do
+    for pairIndex, pair in ipairs(level.portals) do
         local ids = {}
         for index, endpoint in ipairs({pair.entry, pair.exit}) do
             local visual = Components.renderable(index == 1 and {0.2, 0.85, 1} or {0.85, 0.45, 1}, endpoint.radius, 12)
-            visual.shape, visual.label, visual.labelColor = "ring", tostring(#ids + 1), {1, 1, 1}
+            visual.shape, visual.label, visual.labelColor = "ring", string.char(64 + pairIndex) .. index, {1, 1, 1}
             ids[index] = world:create({Position = Components.position(endpoint.x - endpoint.radius, endpoint.y - endpoint.radius),
                 Collider = Components.collider(endpoint.radius * 2, endpoint.radius * 2), Renderable = visual,
                 Portal = {pair = pair.id, cooldown = pair.cooldown,

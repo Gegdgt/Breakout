@@ -21,6 +21,7 @@ function love.load()
                 + require("tests.sprint_spec").run()
                 + require("tests.boss_balance_spec").run()
                 + require("tests.life_effects_spec").run()
+                + require("tests.arcade_improvements_spec").run()
         end, debug.traceback)
         Config.ECS_ASSIGNMENT_MODE = selectedMode
         if not success then error(count, 0) end

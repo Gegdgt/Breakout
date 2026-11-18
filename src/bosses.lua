@@ -7,8 +7,9 @@ function Bosses.create(game)
     if not definition then return end
     local behavior = {}
     for key, value in pairs(definition) do behavior[key] = value end
-    -- Un unico rectangulo local para BossDamage y BossRender; Collider sigue siendo el cuerpo.
+    -- Regiones locales compartidas por daño y dibujo; el cuerpo resuelve un solo rebote.
     behavior.weakPoint = Rules.weakPoint(definition, game.config)
+    behavior.topWeakPoint = Rules.topWeakPoint(definition, game.config)
     local visual = Components.renderable({0.18, 0.24, 0.32}, 7, 18)
     visual.borderColor = game.level.theme.primary
     game.bossId = game.world:create({Position = Components.position(definition.x, definition.y),

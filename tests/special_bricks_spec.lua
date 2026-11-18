@@ -18,6 +18,7 @@ local function fixture(specs, obstacles, sentinel)
     local ids = {}
     for index, spec in ipairs(specs) do
         ids[index] = Bricks.spawn(game.world, Config, game.level, {
+            row = spec.row or 1, column = spec.column or index,
             key = "test" .. index, x = spec.x or 100, y = spec.y or 200,
             w = spec.w or 60, h = spec.h or 25, color = {1, 0.3, 0.3},
             definition = spec.definition or game.level.brickTypes[spec.type or "N"],
@@ -29,7 +30,7 @@ local function fixture(specs, obstacles, sentinel)
     end
     Obstacles.create(game.world, {obstacles = obstacles or {}})
     Motion.configure(game.world, Config)
-    game.remaining = game.world:count("Brick")
+    game.remaining = Bricks.remaining(game.world)
     return game, ids
 end
 
@@ -98,7 +99,7 @@ local function run()
             assert(game.world:count("Ball") == 90 and game.world:count("PowerUp") == 1)
         end)
 
-        test("Explosion afecta una vez a cada bloque dentro del radio y no a los exteriores", function()
+        test("Explosion afecta una vez al vecino ortogonal y no a dos celdas", function()
             local game, ids = fixture({{type = "E"}, {type = "R", x = 190}, {type = "R", x = 300}})
             Damage.hit(game, ids[1], 1, "ball")
             assert(Explosion.pending(game) and game.world:get(ids[2], "Health").current == 3)
@@ -137,10 +138,11 @@ local function run()
         end)
 
         test("Explosiones distintas pueden dañar un resistente sin repetir el evento original", function()
-            local game, ids = fixture({{type = "E"}, {type = "E", x = 170}, {type = "R", x = 145, y = 240}})
+            local game, ids = fixture({{type = "E"}, {type = "E", x = 170},
+                {type = "E", row = 2, column = 1}, {type = "R", row = 2, column = 2, x = 170, y = 240}})
             Damage.hit(game, ids[1], 1, "ball")
             Explosion.process(game)
-            assert(game.world:get(ids[3], "Health").current == 1 and calls == 2)
+            assert(game.world:get(ids[4], "Health").current == 1 and calls == 3)
         end)
 
         test("Blindados rechazan pelotas y respetan fuentes de daño configuradas", function()
@@ -170,7 +172,7 @@ local function run()
             end
         end)
 
-        test("Todos los niveles se completan con daño normal y explosiones en ambos ordenes", function()
+        test("Todos los niveles se completan con daño legal y suministro garantizado en ambos ordenes", function()
             for _, direction in ipairs({1, -1}) do
                 local game = Helpers.newGame()
                 game.progress.maxUnlocked = 10
@@ -180,9 +182,12 @@ local function run()
                     for n = direction == 1 and 1 or #ids, direction == 1 and #ids or 1, direction do
                         local id = ids[n]
                         local brick = game.world:get(id, "Brick")
-                        if brick and brick.kind ~= "armored" then
+                        if brick and brick.kind ~= "unbreakable" then
+                            Helpers.waitForGhost(game, id)
                             for _ = 1, 4 do
-                                if game.world:has(id) then Damage.hit(game, id, 1, "ball") end
+                                if game.world:has(id) then
+                                    Damage.hit(game, id, 1, brick.kind == "armored" and game.level.difficulty.guaranteedPowerup.kind or "ball")
+                                end
                             end
                             Explosion.process(game)
                         end

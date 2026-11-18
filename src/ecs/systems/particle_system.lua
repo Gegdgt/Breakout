@@ -46,7 +46,7 @@ end
 function Particles.update(game, dt)
     local state, world, bus, config = game.state, game.world, game.feedback, game.config
     if game.quitRequested or state == "paused" or state == "menu" or state == "options"
-        or state == "level_select" or state == "level_intro" then return end
+        or state == "level_select" or state == "level_intro" or state == "encyclopedia" then return end
     local count, trails = 0, 0
     for _, id in ipairs(world:query("Particle", "Position", "Velocity", "Renderable")) do
         local particle, p, v = world:get(id, "Particle"), world:get(id, "Position"), world:get(id, "Velocity")

@@ -15,12 +15,21 @@ function Rules.weakPoint(boss, config)
             y = boss.h - h, w = w, h = h}
 end
 
+function Rules.topWeakPoint(boss, config)
+    local w = boss.w * config.BOSS_TOP_WEAK_POINT_WIDTH_RATIO
+    return {x = (boss.w - w) / 2, y = 0, w = w, h = config.BOSS_TOP_WEAK_POINT_HEIGHT}
+end
+
 function Rules.validate(level, config)
     local b = level.boss
     if not b then
         assert(level.victory.kind == "clear_bricks", "Falta jefe para la victoria")
         return
     end
+    assert(finite(config.BOSS_TOP_WEAK_POINT_WIDTH_RATIO) and config.BOSS_TOP_WEAK_POINT_WIDTH_RATIO >= 0.25
+        and config.BOSS_TOP_WEAK_POINT_WIDTH_RATIO <= 0.35, "Ancho del punto superior invalido")
+    local top, main = Rules.topWeakPoint(b, config), Rules.weakPoint(b, config)
+    assert(finite(top.h) and top.h > 0 and top.h < main.y and top.w < main.w, "Puntos debiles superpuestos")
     for _, key in ipairs({"BOSS_HIT_COOLDOWN", "BOSS_HIT_FLASH", "BOSS_INTRO_SECONDS", "BOSS_DEFEAT_SECONDS",
         "BOSS_ACTION_WARNING", "BOSS_SUPPORT_LIFETIME", "CORE_DEFENSE_OPEN_SECONDS", "CORE_DEFENSE_CLOSED_SECONDS",
         "CORE_TELEPORT_INTERVAL", "PADDLE_INVULNERABILITY_SECONDS", "ENEMY_PROJECTILE_LIFETIME", "GUARDIAN_SPEED",

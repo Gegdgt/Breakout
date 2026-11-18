@@ -69,7 +69,7 @@ local function run()
                 assert(game.world:count("Boss") == ((index == 5 or index == 10) and 1 or 0))
                 if game.bossId then
                     assert(game.world:has(game.bossId, "Position", "Velocity", "Collider", "Health", "BossBehavior", "Renderable", "ScoreValue", "Damageable"))
-                    assert(game.world:get(game.bossId, "Health").current == (index == 5 and 20 or 45))
+                    assert(game.world:get(game.bossId, "Health").current == (index == 5 and 10 or 23))
                     assert(game.level.activeVictory == "boss_defeated" and not game:completeLevel())
                     local function dataOnly(value)
                         assert(type(value) ~= "function")
@@ -113,11 +113,11 @@ local function run()
             local p = game.world:get(game.bossId, "Position")
             assert(not Damage.hit(game, game.bossId, 1, "ball", p.x + 5, p.y + 5))
             assert(not Damage.hit(game, game.bossId, 1, "laser"))
-            assert(not hit(game, 1, "explosion") and health.current == 20)
+            assert(not hit(game, 1, "explosion") and health.current == 10)
             for _, source in ipairs({"ball", "fireball", "laser"}) do
                 boss.hitCooldown = 0; assert(hit(game, 1, source))
             end
-            assert(health.current == 17 and game.run.score == 0 and boss.flash > 0)
+            assert(health.current == 7 and game.run.score == 0 and boss.flash > 0)
         end)
 
         test("Pelota normal y de fuego rebotan en jefe, dañan punto debil y mantienen 550 px/s", function()
@@ -126,7 +126,7 @@ local function run()
                 if fire then game:activatePowerup("fireball") end
                 local ball = Helpers.balls(game)[1]; aim(game, ball, 550)
                 Collisions.update(game, 0.05)
-                assert(health.current == 19 and near(ball.velocity.vy, 550))
+                assert(health.current == 9 and near(ball.velocity.vy, 550))
                 assert(game.world:get(ball.id, "Ball").contacts[game.bossId])
             end
         end)
@@ -135,7 +135,7 @@ local function run()
             local game, boss, health = gameAt(5); expose(game); Helpers.setBallCount(game, 90)
             for _, ball in ipairs(Helpers.balls(game)) do aim(game, ball, 550) end
             Collisions.update(game, 0.05)
-            assert(health.current == 19)
+            assert(health.current == 9)
             local ball = Helpers.balls(game)[1]
             boss.hitCooldown = 0
             local p, c = game.world:get(game.bossId, "Position"), game.world:get(game.bossId, "Collider")
@@ -143,10 +143,10 @@ local function run()
                 ball.position.y, ball.velocity.vy = p.y + c.h - 1, 0
                 Collisions.update(game, 0)
             end
-            assert(health.current == 19)
+            assert(health.current == 9)
             ball.position.y = 500; Collisions.update(game, 0)
             aim(game, ball); Collisions.update(game, 0.01)
-            assert(health.current == 18)
+            assert(health.current == 8)
         end)
 
         test("Punto debil movil usa la posicion al impacto, incluso cerca del borde", function()
@@ -162,7 +162,7 @@ local function run()
                 ball.position.x = edge + (valid and .5 or -.5) - ball.collider.w / 2
                 ball.position.y, ball.velocity.vx, ball.velocity.vy = 165, 0, -400
                 Collisions.update(game, 0.05)
-                assert(health.current == (valid and 19 or 20) and ball.velocity.vy > 0)
+                assert(health.current == (valid and 9 or 10) and ball.velocity.vy > 0)
             end
         end)
 
@@ -177,7 +177,7 @@ local function run()
             local shot = game.world:get(shots[1], "Position")
             shot.x, shot.y = p.x + c.w / 2, p.y + c.h + 5
             Projectiles.update(game, 0.05)
-            assert(health.current == 19 and not game.world:has(shots[1]))
+            assert(health.current == 9 and not game.world:has(shots[1]))
         end)
 
         test("Guardian anuncia destinos, se mueve horizontalmente y respeta rapidez/limites", function()
@@ -236,26 +236,26 @@ local function run()
         test("Defensa alterna cierre, aviso y apertura previsibles sin proyectiles", function()
             local game, boss, health = gameAt(10); expose(game)
             BossSystem.update(game, 0)
-            assert(not hit(game) and health.current == 45)
+            assert(not hit(game) and health.current == 23)
             boss.clock = Config.CORE_DEFENSE_CLOSED_SECONDS
             BossSystem.update(game, 0)
             assert(boss.warning == "ABRIENDO NUCLEO" and not hit(game))
             boss.clock = Config.CORE_DEFENSE_CLOSED_SECONDS + Config.BOSS_ACTION_WARNING
             BossSystem.update(game, 0)
-            assert(hit(game) and health.current == 44 and game.world:count("EnemyProjectile") == 0)
+            assert(hit(game) and health.current == 22 and game.world:count("EnemyProjectile") == 0)
             boss.clock = boss.clock + Config.CORE_DEFENSE_OPEN_SECONDS
             BossSystem.update(game, 0)
             assert(not game.world:get(game.bossId, "Damageable").enabled)
         end)
 
-        test("Nucleo reparte 45 HP en tres fases y ningun daño masivo salta una fase", function()
+        test("Nucleo reparte 23 HP en tres fases y ningun daño masivo salta una fase", function()
             local game, boss, health = gameAt(10); expose(game)
-            assert(hit(game, 1000) and health.current == 30 and boss.pendingPhase == 2)
+            assert(hit(game, 1000) and health.current == 15 and boss.pendingPhase == 2)
             assert(not hit(game, 1000))
             BossSystem.update(game, 0)
             assert(boss.phase == 2 and boss.intro > 0 and not hit(game, 1000))
             stepBoss(game, 1.3)
-            assert(hit(game, 1000) and health.current == 15 and boss.pendingPhase == 3)
+            assert(hit(game, 1000) and health.current == 8 and boss.pendingPhase == 3)
             BossSystem.update(game, 0); stepBoss(game, 1.3)
             assert(boss.phase == 3 and hit(game, 1000) and health.current == 0)
             assert(game.state == "campaign_complete" and game.run.score == Config.BOSS_SCORE_VALUES.chaos_core)
@@ -401,10 +401,10 @@ local function run()
             Helpers.setBallCount(game, 90)
             local p = Helpers.paddle(game).position; bullet(game, p.x + 20, p.y, 0, 200, true)
             assert(Enemy.resolve(game))
-            assert(game.state == "game_over" and game.lives == 0 and game.world:count("Ball") == 0 and health.current == 44)
+            assert(game.state == "game_over" and game.lives == 0 and game.world:count("Ball") == 0 and health.current == 22)
             game:keypressed("r"); Helpers.finishIntro(game)
             assert(game.state == "playing" and game.lives == 3 and game.bossId > oldBoss and not game.world:has(oldBoss))
-            assert(game.world:get(game.bossId, "Health").current == 45 and game.world:get(game.bossId, "Boss").phase == 1)
+            assert(game.world:get(game.bossId, "Health").current == 23 and game.world:get(game.bossId, "Boss").phase == 1)
         end)
 
         test("Vencer al jefe gana con bloques restantes, recompensa unica y guardado anterior a transicion", function()
@@ -480,7 +480,7 @@ local function run()
                 Config.ECS_ASSIGNMENT_MODE = true; quits = 0
                 local count = game.world:count("EnemyProjectile")
                 game:update(0); game:update(0.05)
-                assert(quits == 1 and game.quitRequested and game.lives == 3 and health.current == 45)
+                assert(quits == 1 and game.quitRequested and game.lives == 3 and health.current == 23)
                 assert(game.world:count("EnemyProjectile") == count and game.run.score == 0)
                 Config.ECS_ASSIGNMENT_MODE = false
             end
@@ -495,7 +495,7 @@ local function run()
             love.graphics.printf = function(text, ...) labels[text] = true; return printf(text, ...) end
             local success, failure = xpcall(function()
                 love.graphics.setCanvas(canvas); game:draw(); love.graphics.setCanvas()
-                assert(labels["45 / 45   |   Fase 3 / 3 - Caos"] and labels.GOLPEA)
+                assert(labels["23 / 23   |   Fase 3 / 3 - Caos"] and labels.GOLPEA)
                 health.current = 1; hit(game)
                 love.graphics.setCanvas(canvas); game:draw(); love.graphics.setCanvas()
                 assert(labels["YOU WIN!"] and labels["NUCLEO DEL CAOS DESACTIVADO"])

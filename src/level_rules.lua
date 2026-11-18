@@ -1,6 +1,6 @@
 -- Validacion de mecanicas activas; los datos de fases futuras no se ejecutan.
 local Rules = {}
-local kinds = {normal = true, resistant = true, explosive = true, moving = true, ghost = true, armored = true}
+local kinds = {normal = true, resistant = true, explosive = true, moving = true, ghost = true, armored = true, unbreakable = true}
 local patterns = {horizontal = true, vertical = true, oscillatory = true, group = true}
 
 local function number(value, minimum)
@@ -45,17 +45,19 @@ function Rules.validate(level, config)
     for _, brick in ipairs(level.bricks) do
         local d = brick.definition
         assert(kinds[d.kind], "Tipo de bloque desconocido: " .. d.kind)
+        if d.kind == "unbreakable" then assert(d.health == nil, "Irrompible no debe tener salud") end
         local health = d.health or 1
         assert(number(health, 1) and health % 1 == 0, "Salud invalida")
         if d.kind == "resistant" then assert(health >= 2 and health <= 4, "Resistentes: entre 2 y 4 impactos") end
         if d.kind == "explosive" then
-            assert(number(d.radius, 0) and d.radius > 0 and number(d.damage, 1), "Explosion invalida")
+            assert(number(d.damage, 1), "Explosion invalida")
             bombs[#bombs + 1] = brick
         elseif d.kind == "moving" then
             assert(brick.y + brick.h <= level.spawn.paddle.y - config.KINEMATIC_PADDLE_CLEARANCE,
                 "Bloque movil demasiado cerca del paddle")
             motion(d.motion, groups)
         elseif d.kind == "ghost" then
+            assert(d.offset == nil or number(d.offset, 0), "Desfase fantasma invalido")
             assert(number(d.solidSeconds, 0) and d.solidSeconds > 0
                 and number(d.intangibleSeconds, 0) and d.intangibleSeconds > 0
                 and number(d.warningSeconds, 0)
@@ -68,6 +70,11 @@ function Rules.validate(level, config)
             armor[#armor + 1] = brick
         end
     end
+    local objectives = 0
+    for _, brick in ipairs(level.bricks) do
+        if brick.definition.kind ~= "unbreakable" then objectives = objectives + 1 end
+    end
+    assert(objectives > 0 or level.boss, "El nivel necesita objetivos destructibles o un jefe")
     -- Una bomba suficiente o una fuente renovable de fuego/laser evita depender del azar.
     for _, target in ipairs(armor) do
         local acceptsExplosion, covered = false, false
@@ -77,10 +84,8 @@ function Rules.validate(level, config)
         end
         if acceptsExplosion then
             for _, bomb in ipairs(bombs) do
-                local x, y = bomb.x + bomb.w / 2, bomb.y + bomb.h / 2
-                local dx = math.max(target.x - x, 0, x - target.x - target.w)
-                local dy = math.max(target.y - y, 0, y - target.y - target.h)
-                if dx * dx + dy * dy <= bomb.definition.radius ^ 2
+                if target.row and bomb.row and target.column and bomb.column
+                    and math.abs(target.row - bomb.row) + math.abs(target.column - bomb.column) == 1
                     and bomb.definition.damage >= (target.definition.health or 1) then covered = true; break end
             end
         end

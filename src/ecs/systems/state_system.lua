@@ -2,7 +2,8 @@
 -- tras cada transicion para no simular dos estados en el mismo frame.
 local State = {}
 local allowed = {
-    menu = {level_select = true, options = true, level_intro = true},
+    menu = {level_select = true, options = true, encyclopedia = true, level_intro = true},
+    encyclopedia = {menu = true},
     level_select = {menu = true, level_intro = true},
     options = {menu = true},
     level_intro = {playing = true, paused = true, menu = true, level_intro = true},

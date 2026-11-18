@@ -26,7 +26,7 @@ function Progression.loadLevel(game, index, retry)
     Portals.create(game.world, level)
     Bosses.create(game)
     Motion.configure(game.world, game.config, level.spawn.paddle.y)
-    game.remaining = game.world:count("Brick")
+    game.remaining = Bricks.remaining(game.world)
     game.entryRemaining = game.config.LEVEL_ENTRY_SECONDS + game.config.LEVEL_COUNTDOWN_SECONDS
     State.change(game, "level_intro")
     return true

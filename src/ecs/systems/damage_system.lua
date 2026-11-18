@@ -5,11 +5,17 @@ local Feedback = require("src.feedback")
 local Damage = {}
 
 -- Fuentes explicitas y un solo punto de destruccion para todos los ataques.
-function Damage.hit(game, id, amount, source, hitX, hitY)
+function Damage.hit(game, id, amount, source, hitX, hitY, normalY)
     local world = game.world
     if game.quitRequested or game.state ~= "playing" then return false end
     if type(amount) ~= "number" or amount ~= amount or amount <= 0 or amount == math.huge then return false end
-    if world:has(id, "Boss") then return BossDamage.hit(game, id, amount, source, hitX, hitY) end
+    if world:has(id, "Boss") then return BossDamage.hit(game, id, amount, source, hitX, hitY, normalY) end
+    local brick = world:get(id, "Brick")
+    if brick and brick.kind == "unbreakable" then
+        local p, c = world:get(id, "Position"), world:get(id, "Collider")
+        Feedback.emit(game, "wall", hitX or p.x + c.w / 2, hitY or p.y + c.h / 2)
+        return false
+    end
     if not world:has(id, "Brick", "Health", "BrickBehavior") then
         local receiver, health = world:get(id, "Damageable"), world:get(id, "Health")
         if not receiver or not health or health.current <= 0 or receiver.enabled == false
@@ -37,9 +43,12 @@ function Damage.hit(game, id, amount, source, hitX, hitY)
     local chance = world:get(id, "Brick").dropChance
     if behavior.kind == "explosive" then
         local events = game.explosions
+        local grid = world:get(id, "GridPosition")
         events.tail = events.tail + 1
         events.queue[events.tail] = {source = id, x = position.x + collider.w / 2,
-            y = position.y + collider.h / 2, radius = behavior.radius, damage = behavior.damage}
+            y = position.y + collider.h / 2, row = grid and grid.row, column = grid and grid.column,
+            reachX = collider.w + game.level.layout.gap, reachY = collider.h + game.level.layout.gap,
+            damage = behavior.damage}
     end
     if Bricks.destroy(game, id) then
         Powerups.trySpawn(world, game.config, position, collider, chance, game.level.activePowerups, game.level.boss)

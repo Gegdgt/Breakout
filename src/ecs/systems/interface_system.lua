@@ -1,8 +1,10 @@
 -- Navegacion y preferencias; no mueve entidades ni decide puntos o victorias.
 local State = require("src.ecs.systems.state_system")
 local Feedback = require("src.feedback")
+local Encyclopedia = require("src.ui.encyclopedia")
+local Controls = require("src.controls")
 local Interface = {}
-Interface.menuItems = {"Jugar", "Seleccionar nivel", "Opciones", "Salir"}
+Interface.menuItems = {"Jugar", "Seleccionar nivel", "Opciones", "ENCICLOPEDIA", "Salir"}
 Interface.pauseItems = {"Continuar", "Reiniciar nivel", "Volver al menú"}
 Interface.optionItems = {"Volumen general", "Música", "Efectos", "Silencio", "Volver"}
 local volumeKeys = {"masterVolume", "musicVolume", "sfxVolume"}
@@ -26,7 +28,7 @@ function Interface.update(game, dt)
         end
         return true -- Incluso con dt grande, no mover entidades al acabar la cuenta.
     end
-    return game.state == "menu" or game.state == "level_select" or game.state == "options"
+    return game.state == "menu" or game.state == "level_select" or game.state == "options" or game.state == "encyclopedia"
 end
 
 local function selectRow(game, delta, count)
@@ -59,12 +61,13 @@ function Interface.keypressed(game, key, isrepeat)
     local confirm = key == "return" or key == "kpenter"
     if isrepeat and not (up or down or left or right) then return true end
     local state, ui = game.state, game.ui
-    if key == "m" and state ~= "menu" then back(game); return true end
+    if state == "encyclopedia" then return Encyclopedia.keypressed(game, key) end
+    if Controls.matches(game.config, "menu", key) and state ~= "menu" then back(game); return true end
     if state == "playing" or state == "level_intro" then
-        if key == "escape" or key == "p" then State.pause(game); return true end
+        if Controls.matches(game.config, "pause", key) then State.pause(game); return true end
         return state == "level_intro"
     elseif state == "paused" then
-        if key == "escape" or key == "p" then State.resume(game)
+        if Controls.matches(game.config, "pause", key) then State.resume(game)
         elseif up then selectRow(game, -1, 3)
         elseif down then selectRow(game, 1, 3)
         elseif confirm then
@@ -73,13 +76,14 @@ function Interface.keypressed(game, key, isrepeat)
             else back(game) end
         end
     elseif state == "menu" then
-        if up then selectRow(game, -1, 4)
-        elseif down then selectRow(game, 1, 4)
+        if up then selectRow(game, -1, #Interface.menuItems)
+        elseif down then selectRow(game, 1, #Interface.menuItems)
         elseif key == "c" then game:startCampaign(game.progress.maxUnlocked)
         elseif confirm then
             if ui.selection == 1 then game:reset()
             elseif ui.selection == 2 then State.change(game, "level_select")
             elseif ui.selection == 3 then State.change(game, "options")
+            elseif ui.selection == 4 then Encyclopedia.open(game)
             else game:quit(); game.quitRequested = true; love.event.quit() end
         end
     elseif state == "level_select" then
@@ -107,11 +111,28 @@ function Interface.keypressed(game, key, isrepeat)
     elseif state == "game_over" or state == "campaign_complete" then
         if key == "escape" then back(game)
         elseif up or down then selectRow(game, 1, 2)
-        elseif key == "r" or (confirm and ui.selection == 1) then
+        elseif Controls.matches(game.config, "restart", key) or (confirm and ui.selection == 1) then
             if state == "game_over" then game:restartLevel() else game:reset() end
         elseif confirm then back(game) end
     elseif state == "level_complete" and key == "escape" then back(game) end
     return true
+end
+
+function Interface.mousepressed(game, x, y, button)
+    if game.quitRequested or button ~= 1 then return end
+    if game.state == "encyclopedia" then Encyclopedia.mousepressed(game, x, y)
+    elseif game.state == "menu" and x >= 300 and x <= 660 then
+        y = y + 12 * (1 - math.min(1, game.ui.elapsed / game.config.UI_ANIMATION_SECONDS)) ^ 3
+        local row = math.floor((y - 220) / 50) + 1
+        if row >= 1 and row <= #Interface.menuItems and (y - 220) % 50 <= 44 then
+            game.ui.selection = row
+            Interface.keypressed(game, "return")
+        end
+    end
+end
+
+function Interface.wheelmoved(game, _, y)
+    if game.state == "encyclopedia" then Encyclopedia.scroll(game, -y * 42) end
 end
 
 return Interface

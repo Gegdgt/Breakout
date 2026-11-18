@@ -57,7 +57,7 @@ function Audio.stop(game)
 end
 
 local function wanted(game)
-    if game.state == "menu" or game.state == "level_select" or game.state == "options" then return "menu" end
+    if game.state == "menu" or game.state == "level_select" or game.state == "options" or game.state == "encyclopedia" then return "menu" end
     if game.state == "playing" or game.state == "level_intro" then return game.level.boss and "boss" or "level" end
 end
 

@@ -15,6 +15,10 @@ local Config = {
     UI_CLOCK_LIMIT = 60,
     LEVEL_SELECT_COLUMNS = 5,
     OPTION_VOLUME_STEP = 0.1,
+    CONTROLS = {
+        left = {"left", "a"}, right = {"right", "d"}, sprint = {"lshift", "rshift"},
+        action = {"space"}, pause = {"escape", "p"}, restart = {"r"}, menu = {"m"},
+    },
     MAX_FEEDBACK_EVENTS = 64, -- Mas un espacio reservado para vida/resultado.
     MAX_FEEDBACK_PARTICLES = 256,
     MAX_TRAIL_PARTICLES = 128,
@@ -37,6 +41,8 @@ local Config = {
         moving = 200, ghost = 250, armored = 300},
     BOSS_SCORE_VALUES = {mechanical_guardian = 5000, chaos_core = 15000},
     BOSS_WEAK_POINT_SIZE_MULTIPLIER = 1.6,
+    BOSS_TOP_WEAK_POINT_WIDTH_RATIO = 0.30,
+    BOSS_TOP_WEAK_POINT_HEIGHT = 8,
     BOSS_LASER_DROP_WEIGHT_MULTIPLIER = 3.0,
     BOSS_LASER_SUPPLY_INTERVAL = 20,
     BOSS_LASER_SUPPLY_CHANCE = 0.5,
@@ -97,7 +103,7 @@ local Config = {
     EXPLOSION_PARTICLES = 16,
     EXPLOSION_VISUAL_SECONDS = 0.45,
     BRICK_DEFAULTS = {
-        health = 3, explosionRadius = 110, explosionDamage = 1,
+        health = 3, explosionDamage = 1,
         motionAmplitude = 24, motionPeriod = 4,
         solidSeconds = 3, intangibleSeconds = 2, warningSeconds = 0.5,
     },
@@ -105,7 +111,10 @@ local Config = {
         resistant = {0.72, 0.45, 0.93}, explosive = {1, 0.49, 0.18},
         moving = {0.17, 0.78, 0.90}, ghost = {0.72, 0.83, 1},
         armored = {0.42, 0.49, 0.58},
+        unbreakable = {0.22, 0.27, 0.33},
     },
+    BRICK_NAMES = {normal = "Normal", resistant = "Resistente", explosive = "Explosivo", moving = "Móvil",
+        ghost = "Fantasma", armored = "Blindado", unbreakable = "Irrompible"},
 
     POWERUP_DROP_CHANCE = 0.15,
     POWERUP_FALL_SPEED = 150, -- Pixeles por segundo.

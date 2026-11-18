@@ -32,7 +32,7 @@ function BossSystem.support(game, kind)
             capacity = capacity - 1
         end
     end
-    game.remaining = world:count("Brick")
+    game.remaining = Bricks.remaining(world)
 end
 
 local function cleanupSupport(game, dt)
@@ -42,7 +42,7 @@ local function cleanupSupport(game, dt)
         support.remaining = support.remaining - dt
         if support.remaining <= 0 then game.world:destroy(id); changed = true end
     end
-    if changed then game.remaining = game.world:count("Brick") end
+    if changed then game.remaining = Bricks.remaining(game.world) end
 end
 
 function BossSystem.roundReset(game)

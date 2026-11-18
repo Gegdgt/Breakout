@@ -60,9 +60,9 @@ local function run(root)
             assert(snapshot(game) == before and fs.writes == 0 and quits == 0)
         end)
 
-        test("Menu con cuatro opciones y navegacion circular por flechas y W S", function()
+        test("Menu con cinco opciones y navegacion circular por flechas y W S", function()
             local game = fresh()
-            press(game, "up"); assert(game.ui.selection == 4)
+            press(game, "up"); assert(game.ui.selection == 5)
             press(game, "s"); assert(game.ui.selection == 1)
             press(game, "w", "down", "return")
             assert(game.state == "level_intro" and game.levelIndex == 1 and game.lives == 3)
@@ -87,7 +87,7 @@ local function run(root)
                 open(game, "level_select"); game.ui.selectedLevel = index
                 press(game, "return")
                 assert(game.state == "level_intro" and game.levelIndex == index and game.lives == 3 and game.run.score == 0)
-                assert(game.world:count("Ball") == 1 and game.remaining == #game.level.bricks)
+                assert(game.world:count("Ball") == 1 and game.remaining == require("src.bricks").remaining(game.world))
                 assert(game.world:count("Boss") == ((index == 5 or index == 10) and 1 or 0))
             end
         end)
@@ -137,7 +137,7 @@ local function run(root)
 
         test("Salir del menu guarda una vez y solicita cierre sin mas entradas", function()
             local fs = Helpers.memoryFilesystem(); local game = fresh(fs)
-            open(game, "options"); press(game, "left", "escape", "down", "return")
+            open(game, "options"); press(game, "left", "escape", "down", "down", "return")
             assert(game.quitRequested and quits == 1 and fs.writes == 2)
             press(game, "return", "escape", "c"); game:update(100)
             assert(quits == 1 and game.state == "menu" and game.world:count() == 0)
@@ -187,7 +187,7 @@ local function run(root)
             local old = game.world.nextId; game.lives = 1
             press(game, "escape", "down", "return")
             assert(game.state == "level_intro" and game.lives == 3 and game.run.score == 500 and game.run.levelScore == 0)
-            assert(game.remaining == #game.level.bricks and game.world:get(game.bossId, "Health").current == 45)
+            assert(game.remaining == require("src.bricks").remaining(game.world) and game.world:get(game.bossId, "Health").current == 23)
             assert(game.progress.bestScore == 600 and game.progress.maxUnlocked == 10)
             for _, id in ipairs(game.world:query()) do assert(id > old) end
         end)
@@ -344,7 +344,7 @@ local function run(root)
             local success, failure = xpcall(function()
                 game:draw(); local all = table.concat(labels, "\n")
                 for _, expected in ipairs({"Pelotas: 90 / 90", "Vidas: 3", "Puntos: 12345", "COMBO: 13   x5", "GIGANTE 15s",
-                    "FUEGO 10s", "IMAN 15s", "ESCUDO 3/3 20s", "LASER: 20", "45 / 45", "Fase 1 / 3", "Nivel 10 / 10"}) do
+                    "FUEGO 10s", "IMAN 15s", "ESCUDO 3/3 20s", "LASER: 20", "23 / 23", "Fase 1 / 3", "Nivel 10 / 10"}) do
                     assert(all:find(expected, 1, true), expected)
                 end
             end, debug.traceback)

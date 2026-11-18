@@ -71,7 +71,8 @@ function LevelManager.prepare(source, config)
                 assert(inside({x = x, y = y}, width, layout.height, config)
                     and y + layout.height < level.spawn.ball.y, "Bloques fuera del area de juego")
                 level.bricks[#level.bricks + 1] = {
-                    key = row .. ":" .. column, x = x, y = y, w = width, h = layout.height,
+                    key = row .. ":" .. column, row = row, column = column,
+                    x = x, y = y, w = width, h = layout.height,
                     color = copy(config.BRICK_COLORS[(row - 1) % #config.BRICK_COLORS + 1]),
                     definition = copy(definition),
                 }

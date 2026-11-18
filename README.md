@@ -6,6 +6,71 @@ portales, puntuación, combos, estrellas, dos jefes, menús, selector, pausa,
 transiciones, partículas acotadas y audio original.
 Se conserva el ECS existente y el modo normal sigue siendo el predeterminado.
 
+## Actualización arcade: dificultad y enciclopedia
+
+- **Irrompibles (`U` / `unbreakable`)**: metal oscuro con refuerzo `[=]`, sin
+  `Health` ni `ScoreValue`. Rebotan incluso pelotas de fuego, detienen el láser y
+  resisten explosiones; un impacto genera chispas. No dan poderes ni cuentan
+  entre los objetivos. Los niveles con jefe siguen exigiendo derrotarlo.
+- **Jefes**: Guardián **20 → 10 HP**; Núcleo **45 → 23 HP**. Las tres fases del
+  Núcleo distribuyen 8/7/8 HP y cambian con **15 y 8 HP restantes** (65 % y 35 %,
+  los enteros más cercanos a dos tercios y un tercio). Ataques, velocidades,
+  daño por golpe, punto frontal ampliado y mayor peso del láser se conservan.
+- **Núcleo superior**: zona azul centrada de **48 × 8 px**, el 30 % del ancho del
+  jefe. El barrido del cuerpo calcula el contacto en la pose del impacto; la
+  cara superior se identifica con su normal de colisión. Comparte salud,
+  invulnerabilidad y cooldown con el frente. La pelota se separa y rebota una
+  vez; `Ball.contacts` impide repetir daño hasta separarse. Tiene destello y
+  partículas al acertar. No se añade otra barra ni otro cuerpo sólido.
+- **Explosiones en cruz**: `GridPosition.row/column` conserva la celda de origen
+  incluso al mover un bloque. Solo se consultan los cuatro vecinos ortogonales,
+  a distancia Manhattan 1. Daño habitual: 1. La cola iterativa y su registro de
+  fuentes procesadas evitan eventos duplicados; explosiones diferentes sí
+  pueden dañar el mismo resistente. Las partículas recorren esos cuatro ejes.
+- **Enciclopedia**: menú principal → **ENCICLOPEDIA**, con siete poderes, siete
+  tipos de bloques, ambos jefes y controles/mecánicas. Flechas o A/D cambian
+  categoría; arriba/abajo o W/S cambian ficha; rueda, RePág/AvPág y Home/End
+  desplazan el texto; ESC, M o el botón Volver regresan al menú. También admite
+  clics en categorías y fichas. No altera récords, desbloqueos ni guardados.
+  Usa la resolución configurada y ajuste de líneas con recorte y barra de scroll.
+  `src/ui/encyclopedia_data.lua` lee cantidades, colores, teclas y jefes reales;
+  `src/ui/encyclopedia.lua` mantiene navegación y presentación fuera de `main.lua`.
+
+### Dificultad de los niveles 6–9
+
+| Nivel | Distribución y reto | Ayudas conservadas |
+|---|---|---|
+| 6 — Ahora me ves | 45 fantasmas en tres grupos desfasados, 12 resistentes y 8 irrompibles. Siempre hay un grupo sólido salvo espera por pelotas dentro. | Ciclo 3 s sólido / 2 s intangible y avisos previos. |
+| 7 — Otra dimensión | 10 blindados, 20 resistentes, 12 irrompibles y dos pares de portales. Pasillos con accesos laterales. | Fuego garantizado cada 12 s; pares A1/A2 y B1/B2 identificados. |
+| 8 — Precisión extrema | 14 móviles en tres patrones, 6 fantasmas, 8 resistentes, 8 irrompibles y tres obstáculos con fases distintas. | Movimientos suaves de 4–7 s y espacio libre cerca del paddle. |
+| 9 — Caos total | 18 resistentes, 10 explosivos, 8 móviles, 10 fantasmas, 8 blindados, 10 irrompibles, dos pares de portales y dos obstáculos. | Cadenas cortas, fuego garantizado cada 10 s y varios accesos. |
+
+Se conservan las velocidades iniciales, el límite de **550 px/s**, el sprint,
+MULTIBALL hasta **90 pelotas**, tres vidas iniciales y conservación de poderes
+entre vidas. La probabilidad aleatoria sigue siendo 15 %. Los umbrales de
+estrellas de 6 y 9 se ajustaron al nuevo número de objetivos; los récords y las
+estrellas ya guardados se conservan.
+
+Las pruebas de acceso retiran objetivos por capas desde regiones alcanzables
+por una pelota de tamaño real, considerando irrompibles y la envolvente completa
+de obstáculos. También prueban daño legal, fuego garantizado, ventanas fantasma,
+portales en ambos sentidos con ocho direcciones y varios instantes de movimiento,
+y simulación con 90 pelotas. Son comprobaciones de geometría y reglas; no equivalen
+a una campaña completa jugada por una persona ni miden la dificultad subjetiva.
+
+### Archivos de esta actualización
+
+| Área | Archivos modificados o nuevos |
+|---|---|
+| Entrada y configuración | `main.lua`, `src/game.lua`, `src/config.lua`, `src/controls.lua` (nuevo), `src/paddle.lua` |
+| Bloques, mapas y validación | `src/bricks.lua`, `src/ecs/components.lua`, `src/level_manager.lua`, `src/level_rules.lua`, `src/score_rules.lua`, `src/levels/definition.lua`, `src/levels/level05.lua` a `level10.lua` |
+| Jefes | `src/bosses.lua`, `src/boss_rules.lua`, `src/ecs/systems/boss_system.lua`, `boss_damage_system.lua`, `boss_render_system.lua` |
+| Daño y progresión (en `src/ecs/systems/`) | `damage_system.lua`, `explosion_system.lua`, `solid_collision_system.lua`, `progression_system.lua`, `portal_system.lua` |
+| Interfaz (en `src/ecs/systems/`) | `state_system.lua`, `interface_system.lua`, `screen_render_system.lua`, `audio_system.lua`, `particle_system.lua` |
+| Enciclopedia nueva | `src/ui/encyclopedia.lua`, `src/ui/encyclopedia_data.lua` |
+| Pruebas (en `tests/`) | `arcade_improvements_spec.lua` (nuevo), `main.lua`, `helpers.lua`, `boss_spec.lua`, `boss_balance_spec.lua`, `levels_spec.lua`, `interface_spec.lua`, `life_effects_spec.lua`, `powers_portals_spec.lua`, `score_spec.lua`, `special_bricks_spec.lua` |
+| Documentación | `README.md` |
+
 ## Ejecutar
 
 Desde la raíz del repositorio, en PowerShell:
@@ -66,7 +131,7 @@ el menú principal**. Jugar inicia desde el nivel 1; Seleccionar nivel permite r
 cualquier nivel desbloqueado. Espacio está reservado a los poderes durante la partida.
 ESC ya no cierra el juego durante la partida: abre la pausa. Perder el foco de la
 ventana también pausa; recuperarlo no reanuda automáticamente. La navegación es
-por teclado; no se ha añadido control por mouse.
+por teclado; el menú principal y la enciclopedia también admiten mouse.
 
 ### Sprint del paddle
 
@@ -180,10 +245,11 @@ un barrido AABB con movimiento relativo, descrito a continuación.
 |---|---|---|
 | Normal | Colores por fila | Un impacto; comportamiento anterior. |
 | Resistente (B1) | Morado, etiqueta R3/R2/R1 | Salud configurable de 2 a 4; se oscurece y cambia la etiqueta con cada daño. |
-| Explosivo (B2) | Naranja, asterisco | Al destruirse daña dentro de su radio y puede activar otros explosivos. |
+| Explosivo (B2) | Naranja, asterisco | Daña los cuatro vecinos ortogonales de cuadrícula y puede activar otros explosivos. |
 | Móvil (B3) | Cian, símbolo <> | Trayectoria horizontal, vertical, oscilatoria o compartida por un grupo. |
 | Fantasma (B4) | Azul claro, G | Alterna entre sólido e intangible; transparencia y pulso de aviso. |
 | Blindado (B5) | Gris con borde claro, A | Rebota pelotas normales sin recibir daño; acepta fuego, láser o explosiones según configuración. |
+| Irrompible (U) | Metal oscuro, borde reforzado, [=] | Sin salud; inmune a todos los ataques, sin puntos/poderes y excluido de la victoria. |
 | Obstáculo móvil (M3) | Barra oscura con borde cian | Indestructible, refleja pelotas y no cuenta para completar el nivel. |
 
 Los resistentes registran **un daño por contacto continuo de cada pelota**. El
@@ -192,11 +258,11 @@ La destrucción retira todos los componentes inmediatamente y sortea un poder un
 sola vez, incluso si llegan 90 pelotas durante la misma actualización.
 
 Las explosiones usan una **cola iterativa**, sin llamadas recursivas. Cada bomba
-se retira antes de encolar su único evento; cada evento recorre una vez los bloques
-vivos. Explosiones distintas sí pueden dañar el mismo resistente. El alcance se
-mide desde el centro de la explosión hasta el punto más cercano del rectángulo
-objetivo. Los obstáculos no reciben daño; los fantasmas intangibles tampoco.
-Partículas radiales muestran la expansión y desaparecen en 0,45 segundos.
+se retira antes de encolar su único evento. Cada evento consulta las cuatro celdas
+vecinas de `GridPosition`, nunca diagonales ni una segunda celda; se procesa una
+sola vez por fuente. Explosiones distintas sí pueden dañar el mismo resistente.
+Los irrompibles, obstáculos y fantasmas intangibles no reciben daño.
+Partículas en cruz muestran el alcance y desaparecen en 0,45 segundos.
 
 Las trayectorias usan senos y tiempo acumulado con `dt`, actualizando `Position`
 mediante `Velocity` y el integrador existente. Los grupos comparten patrón, fase
@@ -213,11 +279,10 @@ destruidos y tiempos de movimiento/fantasmas; reiniciar el nivel los restaura.
 
 ### Blindados y niveles completables
 
-En los niveles 7, 8 y 9 se añadieron o recolocaron explosivos en las distribuciones
-manuales. El nivel 10 ya tenía cobertura suficiente. `level_rules.lua` rechaza un
-mapa si algún blindado no tiene una bomba estática cercana y eficaz ni una fuente
+Los niveles 7, 9 y 10 incluyen blindados. `level_rules.lua` rechaza un
+mapa si algún blindado no tiene una bomba ortogonal adyacente y eficaz ni una fuente
 renovable garantizada de un poder al que sea vulnerable (`fireball` o `laser`).
-Los mapas actuales conservan la cobertura explosiva y además suministran fuego.
+Los mapas actuales con blindados suministran fuego renovable garantizado.
 Una probabilidad aleatoria de conseguir el poder no basta para validar un mapa.
 
 `Damage.hit(game, id, amount, source)` acepta las fuentes configuradas `explosion`,
@@ -228,8 +293,9 @@ sistema de daño. Las pelotas normales nunca dañan blindados.
 
 `BRICK_DEFAULTS`, `BRICK_TYPE_COLORS`, `BALL_DAMAGE`, `KINEMATIC_MAX_SPEED`,
 `KINEMATIC_PADDLE_CLEARANCE` y los límites de explosiones están en `src/config.lua`.
-Cada prototipo de `src/levels/definition.lua` puede especificar salud, radio,
-daño, ciclo fantasma y trayectoria; un nivel puede sobrescribirlo.
+Cada prototipo de `src/levels/definition.lua` puede especificar salud,
+daño, ciclo/desfase fantasma y trayectoria; un nivel puede sobrescribirlo.
+El alcance explosivo es siempre una celda ortogonal, sin parámetro de radio.
 
 Hay un máximo de **256 bloques por nivel**, **256 eventos de explosión procesados
 por actualización** y **192 partículas de explosión simultáneas**. Al reducir el
@@ -448,10 +514,10 @@ Cada `src/levels/levelNN.lua` declara `stars = {twoScore, threeScore, minLives}`
 | 3 | 5800 | 7000 | 10500 | 3 |
 | 4 | 4300 | 5200 | 8000 | 3 |
 | 5 | 9900 | 12000 | 18000 | 3 |
-| 6 | 7200 | 8500 | 13000 | 3 |
-| 7 | 6800 | 8200 | 12500 | 3 |
-| 8 | 7400 | 9000 | 14000 | 3 |
-| 9 | 8800 | 11000 | 17000 | 3 |
+| 6 | 13050 | 17000 | 26000 | 3 |
+| 7 | 6400 | 8200 | 12500 | 3 |
+| 8 | 5500 | 9000 | 14000 | 3 |
+| 9 | 11200 | 14500 | 23000 | 3 |
 | 10 | 23400 | 28000 | 40000 | 3 |
 
 Los objetivos requieren combos moderados y no exigen conseguir vidas extra.
@@ -467,16 +533,17 @@ inferior nunca reduce las estrellas ni la puntuación récord.
 
 ## Fase 5: jefes
 
-Ambos jefes son entidades ECS sólidas con salud, comportamiento y un punto débil
-en la cara inferior. El indicador **GOLPEA** verde acepta pelota normal, fuego y
-láser; **CERRADO** gris rechaza daño. El resto del cuerpo siempre protege al jefe.
-Las explosiones pueden romper protectores, pero no dañan al jefe. El fuego rebota
+Ambos jefes son entidades ECS sólidas con salud, comportamiento, un punto débil
+en la cara inferior y un núcleo azul superior. El indicador **GOLPEA** verde acepta
+pelota normal, fuego y láser; **CERRADO** gris rechaza daño en ambas zonas.
+El resto del cuerpo protege al jefe. Las explosiones solo afectan vecinos de
+cuadrícula, no al jefe ni a sus protectores generados fuera de ella. El fuego rebota
 en el cuerpo del jefe, conservando su capacidad de atravesar bloques vulnerables.
 Ningún combate exige conseguir un poder aleatorio para ganar.
 
 ### Guardián mecánico — nivel 5
 
-- **20 HP**, recompensa base **5000**; punto débil abierto después de la entrada.
+- **10 HP**, recompensa base **5000**; puntos débiles abiertos después de la entrada.
 - Entrada de 1,2 s. Anuncia **MOVIMIENTO** y dibuja el destino durante 0,75 s.
 - Alterna posiciones horizontales a 90 px/s, con descansos de 2 s.
 - Genera pares de protectores resistentes de 2 HP en espacios libres, dejando
@@ -485,8 +552,8 @@ Ningún combate exige conseguir un poder aleatorio para ganar.
 
 ### Núcleo del caos — nivel 10
 
-Tiene **45 HP**, repartidos en tres presupuestos de **15 HP**. Un impacto no puede
-saltar fases. Al llegar a 30 o 15 HP, anuncia el nuevo patrón durante 1,2 s y limpia
+Tiene **23 HP**, repartidos en tres presupuestos de **8, 7 y 8 HP**. Un impacto no puede
+saltar fases. Al llegar a 15 u 8 HP, anuncia el nuevo patrón durante 1,2 s y limpia
 los proyectiles enemigos; la barra muestra salud total, número y nombre de fase.
 
 | Fase | Comportamiento |
@@ -554,8 +621,9 @@ un multiplicador excesivo; no sobresale ni pierde su proporción. `boss_rules.lu
 calcula la geometría al crear la entidad y `BossBehavior.weakPoint` proporciona
 **la misma zona vulnerable al sistema de daño y al dibujo**. El `Collider` del
 cuerpo conserva 160×60 o 160×70 px. Los datos base de cada nivel no se modifican
-ni se vuelve a multiplicar el tamaño al reiniciar. Salud (20/45), daño, protecciones,
-ventanas de apertura, fases, movimiento y ataques permanecen iguales.
+ni se vuelve a multiplicar el tamaño al reiniciar. La salud ahora es 10/23;
+daño, protecciones, ventanas de apertura, movimiento y ataques se conservan.
+El nuevo núcleo superior usa `BossBehavior.topWeakPoint` y la misma protección.
 
 `BOSS_LASER_DROP_WEIGHT_MULTIPLIER = 3.0` multiplica únicamente el peso del láser
 en el sorteo existente. Se aplica por la presencia de `level.boss`, sin comprobar
@@ -607,7 +675,7 @@ los barridos de colisión, el renderizador del jefe, sus patrones ni el sprint.
 
 ### Menú, selector y opciones
 
-El menú principal ofrece **Jugar**, **Seleccionar nivel**, **Opciones** y **Salir**.
+El menú principal ofrece **Jugar**, **Seleccionar nivel**, **Opciones**, **ENCICLOPEDIA** y **Salir**.
 Jugar comienza una campaña desde el primer nivel. El selector presenta dos filas
 de cinco tarjetas con número, nombre, bloqueo/desbloqueo, mejores estrellas y
 récord por nivel. Se puede enfocar una tarjeta bloqueada para leerla, pero Enter
@@ -651,6 +719,7 @@ el coordinador retorna antes de la simulación cuando corresponde.
 | `menu` | Menú principal; mundo detenido. |
 | `level_select` | Diez niveles, bloqueo y récords. |
 | `options` | Preferencias persistentes. |
+| `encyclopedia` | Guía de cuatro categorías; mundo detenido y progreso conservado. |
 | `level_intro` | Presentación del nivel/jefe y cuenta 3, 2, 1; entidades detenidas. |
 | `playing` | Simulación ECS habitual. |
 | `paused` | Mundo y temporizadores congelados; recuerda si se pausó partida o entrada. |
@@ -706,7 +775,7 @@ feedback es independiente de la cola que resuelve el daño de las explosiones.
 - Las pelotas dejan estelas azules o naranjas durante fuego. Un núcleo claro
   mantiene su contraste incluso con 90 pelotas. Las capturadas no dejan estela.
 - Recoger poderes, cruzar portales y golpear/derrotar jefes produce ráfagas breves.
-  Se conservan los anillos de portal, radios de explosión y avisos de jefes anteriores.
+  Se conservan los anillos de portal y avisos de jefes; las explosiones ahora se dibujan en cruz.
 - Completar un nivel o la campaña produce una celebración con gravedad; tiene
   prioridad sobre efectos antiguos cuando se alcanza el cupo.
 
@@ -789,12 +858,12 @@ los barridos ni las condiciones de victoria.
 | 2 | Resistencia | Cuñas resistentes y abertura superior | Resistencia de 3 impactos; escudo. |
 | 3 | Reacción en cadena | Racimos explosivos conectados | Explosiones; pelota de fuego. |
 | 4 | En movimiento | Filas desplazadas con corredores | Cuatro patrones móviles y obstáculo horizontal; láser. |
-| 5 | Guardián mecánico | Bastión protector con centro abierto | Imán; jefe de 20 HP, patrulla y protectores. |
-| 6 | Ahora me ves | Alternancia diagonal de tipos | Fantasmas y resistentes; vida extra. |
-| 7 | Otra dimensión | Dos cámaras y corredor central | Blindados con explosivos cercanos; portales y fuego garantizado. |
-| 8 | Precisión extrema | Diagonales y objetivos separados | Móviles, fantasmas, blindados y dos obstáculos. |
-| 9 | Caos total | Racimos y rutas laterales | Mezcla de tipos, obstáculo y portales. |
-| 10 | Núcleo del caos | Defensas alrededor del núcleo | Todos los poderes; jefe de 45 HP, tres fases, ataques y teletransporte. |
+| 5 | Guardián mecánico | Bastión protector con centro abierto | Imán; jefe de 10 HP, dos zonas vulnerables, patrulla y protectores. |
+| 6 | Ahora me ves | Grupos fantasma desfasados | Precisión temporal, resistentes e irrompibles. |
+| 7 | Otra dimensión | Cámaras y pasillos abiertos | Blindados, resistentes, irrompibles y dos pares de portales; fuego garantizado. |
+| 8 | Precisión extrema | Objetivos móviles y pasos estrechos | 14 móviles, fantasmas, resistentes, irrompibles y tres obstáculos. |
+| 9 | Caos total | Zonas con cadenas cortas | Todos los tipos especiales, dos obstáculos y dos pares de portales. |
+| 10 | Núcleo del caos | Defensas alrededor del núcleo | Todos los poderes; jefe de 23 HP, dos zonas vulnerables, tres fases y teletransporte. |
 
 La rapidez inicial aumenta gradualmente de unos **341 a 419 px/s**. Los colores
 de fondo y acento cambian por nivel. Los normales conservan la paleta por filas;
@@ -1020,10 +1089,10 @@ para jugar normalmente; no hace falta editar el sistema de colisiones.
 & "C:\Program Files\LOVE\lovec.exe" tests
 ```
 
-Resultado actual: fases 1–7, límites, sprint, balance de jefes y poderes entre vidas:
+Resultado actual: 299 escenarios anteriores conservados y 19 de las mejoras arcade:
 
 ```text
-PASS: 299 escenarios de Breakout
+PASS: 318 escenarios de Breakout
 ```
 
 - **33 escenarios previos conservados**, con expectativas adaptadas a los estados
@@ -1185,8 +1254,8 @@ validación humana del balance de los diez niveles.
     permanece aunque se eliminen todos los bloques.
 13. Nivel 6: comprueba el aviso y la alternancia de los G. Las pelotas atraviesan
     los bloques atenuados; un bloque ocupado debe esperar antes de hacerse sólido.
-14. Niveles 7–10: las A grises resisten pelotas normales. Apunta a los explosivos
-    cercanos o recoge fuego; debe reaparecer una oportunidad cada 10–12 s.
+14. Niveles 7, 9 y 10: las A grises resisten pelotas normales. Apunta a los explosivos
+    ortogonales adyacentes o recoge fuego; debe reaparecer una oportunidad cada 10–12 s.
 15. Recoge gigante: dura 15 s y renueva sin seguir creciendo. Combínalo con escudo;
     observa tiempo e impactos restantes y la desaparición tras el tercer rebote.
 16. Recoge fuego y después MULTIBALL: todas las pelotas deben ser naranjas con
@@ -1212,12 +1281,12 @@ validación humana del balance de los diez niveles.
 24. Vuelve al menú o cierra y abre el juego: los récords se conservan. Repite con
     menos puntos/estrellas: no deben bajar. R tras GAME OVER conserva solo los puntos
     de niveles previos; M y Enter comienzan una campaña con cero puntos.
-25. Nivel 5: observa la barra de 20 HP, el aviso MOVIMIENTO y su destino. Abre paso
+25. Nivel 5: observa la barra de 10 HP, el aviso MOVIMIENTO y su destino. Abre paso
     entre los protectores y golpea el rectángulo verde inferior con pelota o láser.
     Un golpe en el cuerpo no quita salud; derrotarlo avanza al nivel 6 incluso si
     quedan bloques y concede una sola recompensa.
-26. Nivel 10: comprueba el ciclo CERRADO → ABRIENDO NÚCLEO → GOLPEA. A 30 HP debe
-    anunciar Ataque; a 15 HP, Caos. Observa la línea de aviso, desplázate antes de
+26. Nivel 10: comprueba el ciclo CERRADO → ABRIENDO NÚCLEO → GOLPEA. A 15 HP debe
+    anunciar Ataque; a 8 HP, Caos. Observa la línea de aviso, desplázate antes de
     recibir un disparo y destruye proyectiles rojos con láser. Esquiva los ámbar.
 27. En Caos, observa el contorno de destino antes del teletransporte, el abanico de
     tres disparos y los fantasmas. Un golpe enemigo al paddle, incluso con MULTIBALL,

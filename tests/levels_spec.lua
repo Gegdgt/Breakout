@@ -5,7 +5,7 @@ local Powerups = require("src.powerups")
 local Helpers = require("tests.helpers")
 
 local function clear(game)
-    for _, id in ipairs(game.world:query("Brick")) do assert(Bricks.destroy(game, id)) end
+    for _, id in ipairs(game.world:query("Brick", "Health")) do assert(Bricks.destroy(game, id)) end
     Helpers.defeatBoss(game)
 end
 
@@ -37,9 +37,9 @@ local function run()
             assert(level.activeVictory == (level.boss and "boss_defeated" or "clear_bricks") and #level.activePowerups == #level.powerups)
             assert(level.activePowerups[1] == "multiball")
         end
-        assert(manager:get(5).boss.health == 20)
-        assert(manager:get(10).boss.health == 45 and #manager:get(10).boss.phases == 3)
-        assert(#manager:get(4).obstacles == 1 and #manager:get(7).portals == 1)
+        assert(manager:get(5).boss.health == 10)
+        assert(manager:get(10).boss.health == 23 and #manager:get(10).boss.phases == 3)
+        assert(#manager:get(4).obstacles == 1 and #manager:get(7).portals == 2)
         for index = 7, 10 do
             assert(manager:get(index).difficulty.guaranteedPowerup.kind == "fireball")
         end
@@ -83,8 +83,8 @@ local function run()
         for index = 1, 10 do
             assert(Helpers.startCampaign(game, index))
             assert(game.world == world and game.lives == 3)
-            assert(game.remaining == #game.level.bricks
-                and world:count() == game.remaining + 2 + #game.level.obstacles + #game.level.portals * 2 + (game.level.boss and 1 or 0))
+            assert(game.remaining == Bricks.remaining(game.world)
+                and world:count() == #game.level.bricks + 2 + #game.level.obstacles + #game.level.portals * 2 + (game.level.boss and 1 or 0))
             assert(world:count("MovingObstacle") == #game.level.obstacles)
             local ball, paddle = Helpers.balls(game)[1], Helpers.paddle(game)
             assert(ball.position.x == game.level.spawn.ball.x and ball.position.y == game.level.spawn.ball.y)
@@ -182,7 +182,7 @@ local function run()
         assert(game.remaining == count and game.world:count("Ball") == 0)
         game:keypressed("r"); Helpers.finishIntro(game)
         assert(game.state == "playing" and game.levelIndex == 4 and game.lives == 3)
-        assert(game.remaining == #game.level.bricks)
+        assert(game.remaining == Bricks.remaining(game.world))
         local ball = Helpers.balls(game)[1].id
         game:keypressed("r"); Helpers.finishIntro(game)
         assert(game.world:has(ball), "R se ignora durante playing")

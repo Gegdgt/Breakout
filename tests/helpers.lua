@@ -56,6 +56,17 @@ function Helpers.bricks(game) return Helpers.query(game, "Brick") end
 function Helpers.powers(game) return Helpers.query(game, "PowerUp") end
 function Helpers.paddle(game) return Helpers.query(game, "PaddleControl")[1] end
 
+function Helpers.waitForGhost(game, id)
+    local ghost = game.world:get(id, "Ghost")
+    if not ghost then return end
+    for _ = 1, 60 do
+        if ghost.solid then return end
+        require("src.ecs.systems.ghost_system").update(game.world, 0.05)
+        require("src.ecs.systems.score_system").update(game, 0.05)
+    end
+    assert(ghost.solid, "El fantasma debe ofrecer una ventana de daño")
+end
+
 function Helpers.setBallCount(game, count)
     for _, id in ipairs(game.world:query("Ball")) do game.world:destroy(id) end
     for index = 1, count do Ball.spawn(game.world, game.config) end
@@ -68,7 +79,7 @@ function Helpers.keepBricks(game, indices)
     for _, id in ipairs(ids) do
         if not keep[id] then game.world:destroy(id) end
     end
-    game.remaining = game.world:count("Brick")
+    game.remaining = require("src.bricks").remaining(game.world)
 end
 
 function Helpers.keepNormalBricks(game, count)
@@ -93,7 +104,7 @@ function Helpers.defeatBoss(game)
         BossSystem.update(game, 1 / 60)
         -- Esta fixture aisla la condicion de victoria; los protectores tienen pruebas propias.
         for _, id in ipairs(game.world:query("BossSupport")) do game.world:destroy(id) end
-        game.remaining = game.world:count("Brick")
+        game.remaining = require("src.bricks").remaining(game.world)
         local p, c = game.world:get(game.bossId, "Position"), game.world:get(game.bossId, "Collider")
         Damage.hit(game, game.bossId, 1, "ball", p.x + c.w / 2, p.y + c.h)
     end

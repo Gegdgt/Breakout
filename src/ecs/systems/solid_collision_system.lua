@@ -5,7 +5,8 @@ local Solid = {}
 
 local function penetrable(world, id, fire)
     local behavior = world:get(id, "BrickBehavior")
-    return fire and behavior and (behavior.kind ~= "armored" or behavior.vulnerableTo.fireball)
+    return fire and behavior and behavior.kind ~= "unbreakable"
+        and (behavior.kind ~= "armored" or behavior.vulnerableTo.fireball)
 end
 
 local function candidate(world, ids, x, y, dx, dy, size, best, time, nx, ny, fire)
@@ -82,7 +83,7 @@ function Solid.resolve(game, id, previousX, previousY, bricks, obstacles)
                 hitY = p.y + math.max(0, math.min(collider.h, previousY + dy * time + size.h / 2 - by))
             end
             Damage.hit(game, target, ball.fire and game.config.FIREBALL_DAMAGE or game.config.BALL_DAMAGE,
-                ball.fire and "fireball" or "ball", hitX, hitY)
+                ball.fire and "fireball" or "ball", hitX, hitY, ny)
         end
     end
 end

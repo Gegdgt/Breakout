@@ -216,7 +216,7 @@ local function run()
                 if campaign then assert(game:reset()) else assert(game:restartLevel()) end
                 clean(game)
                 assert(game.state == "level_intro" and game.lives == 3 and game.run.score == 0)
-                assert(game.remaining == #game.level.bricks and game.world:count("Ball") == 1 and not game.world:has(oldPaddle))
+                assert(game.remaining == Bricks.remaining(game.world) and game.world:count("Ball") == 1 and not game.world:has(oldPaddle))
                 assert(game.progress.bestScore > 0, "Los records persistentes no se borran")
             end
         end)
