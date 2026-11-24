@@ -1,104 +1,66 @@
--- Fabrica de pelotas y sistema de reglas (copias y perdida de la ultima pelota).
-local Components = require("src.ecs.components")
+local Bricks = require("src.bricks")
+local Collision = require("src.collision")
+
 local Ball = {}
+local PADDLE_SPEED_GAIN = 3
 
-local function finite(value)
-    return type(value) == "number" and value == value and math.abs(value) < math.huge
+function Ball.new(width, paddleY)
+    local w, h = 12, 10
+    return {x = (width - w) / 2, y = paddleY - 75, w = w, h = h, vx = 215, vy = -325}
 end
 
--- Punto comun para toda escritura de velocidad, incluidos futuros poderes/portales.
--- Modifica el componente de datos sin crear tablas y conserva la direccion finita.
-function Ball.limitSpeed(velocity, config)
-    local vx, vy, maximum = velocity.vx, velocity.vy, config.BALL_MAX_SPEED
-    if not finite(vx) or not finite(vy) or not finite(maximum) or maximum <= 0 then
-        velocity.vx, velocity.vy = 0, 0 -- No propagar NaN/infinito a Position.
-        return 0
+local function timeToEdge(position, velocity, edge)
+    if velocity == 0 then return math.huge end
+    return (edge - position) / velocity
+end
+
+function Ball.move(ball, paddle, paddleVelocity, bricks, width, height, dt)
+    local edgeX = ball.vx < 0 and 0 or width - ball.w
+    local edgeY = ball.vy < 0 and 0 or height - ball.h
+    local wallTimeX = timeToEdge(ball.x, ball.vx, edgeX)
+    local wallTimeY = timeToEdge(ball.y, ball.vy, edgeY)
+
+    local paddleTime = math.huge
+    if ball.vy > 0 then
+        -- Restar el movimiento del paddle para calcular el contacto entre ambos.
+        paddleTime = Collision.sweep(ball, paddle, ball.vx - paddleVelocity, ball.vy) or math.huge
     end
-    local speed = math.sqrt(vx * vx + vy * vy)
-    if speed > maximum then
-        if speed == math.huge then
-            -- Entradas finitas extremas pueden desbordar al elevarse al cuadrado.
-            local scale = math.max(math.abs(vx), math.abs(vy))
-            vx, vy = vx / scale, vy / scale
-            speed = math.sqrt(vx * vx + vy * vy)
+    local brickIndex, brickTime, brickAxis = Bricks.firstHit(bricks, ball)
+    local elapsed = math.min(dt, wallTimeX, wallTimeY, paddleTime, brickTime)
+    ball.x = ball.x + ball.vx * elapsed
+    ball.y = ball.y + ball.vy * elapsed
+
+    if elapsed == paddleTime then
+        ball.y = paddle.y - ball.h
+        ball.vx = -ball.vx
+        ball.vy = -ball.vy - PADDLE_SPEED_GAIN
+    elseif elapsed == brickTime then
+        local brick = table.remove(bricks, brickIndex)
+        if brickAxis == "x" then
+            ball.x = ball.vx > 0 and brick.x - ball.w or brick.x + brick.w
+            ball.vx = -ball.vx
+        else
+            ball.y = ball.vy > 0 and brick.y - ball.h or brick.y + brick.h
+            ball.vy = -ball.vy
         end
-        velocity.vx = (vx / speed) * maximum
-        velocity.vy = (vy / speed) * maximum
-        return maximum
+    else
+        if elapsed == wallTimeX then
+            ball.x = edgeX
+            ball.vx = -ball.vx
+        end
+        if elapsed == wallTimeY then
+            ball.y = edgeY
+            if ball.vy > 0 then return elapsed, true end
+            ball.vy = -ball.vy
+        end
     end
-    return speed -- Incluye cero: nunca dividir por una rapidez nula.
+
+    return elapsed, false
 end
 
-function Ball.spawn(world, config, level)
-    local spawn = level and level.spawn.ball
-    local initial = level and level.initialVelocity
-    local velocity = Components.velocity(initial and initial.vx or config.BALL_START_VX,
-                                         initial and initial.vy or config.BALL_START_VY)
-    Ball.limitSpeed(velocity, config)
-    local id = world:create({
-        Position = Components.position(spawn and spawn.x or (config.WIDTH - config.BALL_SIZE) / 2,
-                                       spawn and spawn.y or config.PADDLE_Y - 85),
-        Velocity = velocity,
-        Collider = Components.collider(config.BALL_SIZE, config.BALL_SIZE),
-        Renderable = Components.renderable({0.98, 0.98, 0.98}, 0, 40),
-        Ball = Components.ball(config),
-    })
-    -- Toda fabrica de pelotas hereda el efecto global de la ronda, tambien MULTIBALL.
-    for _, effects in pairs(world.components.TimedEffect or {}) do
-        if effects.fireball > 0 then Ball.setFire(world, id, true); break end
-    end
-    return id
-end
-
-function Ball.setFire(world, id, active)
-    local ball, visual = world:get(id, "Ball"), world:get(id, "Renderable")
-    ball.fire = active
-    visual.color = active and {1, 0.40, 0.12} or {0.98, 0.98, 0.98}
-    visual.borderColor = active and {1, 1, 0.85} or nil
-end
-
--- Misma dispersion y normalizacion que antes; cada copia tiene datos propios.
-function Ball.cloneRotated(world, id, angle, config, level)
-    local position = world:get(id, "Position")
-    local velocity = world:get(id, "Velocity")
-    local collider = world:get(id, "Collider")
-    local clone = Ball.spawn(world, config, level)
-    local clonePosition = world:get(clone, "Position")
-    local cloneVelocity = world:get(clone, "Velocity")
-    local cloneCollider = world:get(clone, "Collider")
-    clonePosition.x, clonePosition.y = position.x, position.y
-    cloneCollider.w, cloneCollider.h = collider.w, collider.h
-
-    local speed = Ball.limitSpeed(velocity, config)
-    local vx, vy = velocity.vx, velocity.vy
-    if speed < 0.000001 then
-        -- La fabrica ya limito la velocidad inicial de este nivel.
-        vx, vy = cloneVelocity.vx, cloneVelocity.vy
-        speed = math.sqrt(vx * vx + vy * vy)
-    end
-    if speed == 0 then return clone end
-    local cosine, sine = math.cos(angle), math.sin(angle)
-    local rotatedX = vx * cosine - vy * sine
-    local rotatedY = vx * sine + vy * cosine
-    local minimumAxisSpeed = speed * 0.10
-    if math.abs(rotatedX) < minimumAxisSpeed then
-        rotatedX = (rotatedX < 0 and -1 or 1) * minimumAxisSpeed
-    end
-    if math.abs(rotatedY) < minimumAxisSpeed then
-        rotatedY = (rotatedY < 0 and -1 or 1) * minimumAxisSpeed
-    end
-    local rotatedSpeed = math.sqrt(rotatedX * rotatedX + rotatedY * rotatedY)
-    cloneVelocity.vx = rotatedX * speed / rotatedSpeed
-    cloneVelocity.vy = rotatedY * speed / rotatedSpeed
-    Ball.limitSpeed(cloneVelocity, config)
-    return clone
-end
-
--- Se ejecuta una sola vez despues de las colisiones de todas las pelotas.
-function Ball.checkRound(game)
-    if game.world:count("Ball") > 0 then return false end
-    game:loseLife()
-    return true
+function Ball.draw(ball)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.rectangle("fill", ball.x, ball.y, ball.w, ball.h)
 end
 
 return Ball

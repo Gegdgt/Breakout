@@ -1,75 +1,57 @@
--- Fabrica de bloques y sistema de destruccion/victoria.
-local Components = require("src.ecs.components")
-local Score = require("src.ecs.systems.score_system")
-local Feedback = require("src.feedback")
+local Collision = require("src.collision")
+
 local Bricks = {}
+local COLUMNS = 12
+local GAP = 6
+local MARGIN = 45
+local TOP = 48
+local HEIGHT = 20
 
-function Bricks.create(world, config, level)
-    for _, spec in ipairs(level.bricks) do
-        Bricks.spawn(world, config, level, spec)
+local colors = {
+    {0.90, 0.32, 0.34},
+    {0.96, 0.53, 0.30},
+    {0.97, 0.76, 0.32},
+    {0.39, 0.77, 0.42},
+    {0.26, 0.73, 0.77},
+    {0.37, 0.53, 0.90},
+}
+
+function Bricks.new(width)
+    local bricks = {}
+    local w = (width - 2 * MARGIN - (COLUMNS - 1) * GAP) / COLUMNS
+
+    for row, color in ipairs(colors) do
+        for column = 1, COLUMNS do
+            bricks[#bricks + 1] = {
+                x = MARGIN + (column - 1) * (w + GAP),
+                y = TOP + (row - 1) * (HEIGHT + GAP),
+                w = w,
+                h = HEIGHT,
+                color = color,
+            }
+        end
     end
+
+    return bricks
 end
 
-function Bricks.spawn(world, config, level, spec)
-    local definition = spec.definition
-    local renderable = Components.renderable(config.BRICK_TYPE_COLORS[definition.kind] or spec.color, 2, 10)
-    renderable.highlight = true
-    renderable.baseColor = {unpack(renderable.color)}
-    renderable.labelColor = {0.06, 0.08, 0.12}
-    local health = definition.health or 1
-    local labels = {resistant = "R" .. health, explosive = "*", moving = "<>", ghost = "G", armored = "A", unbreakable = "[=]"}
-    renderable.label = labels[definition.kind]
-    if definition.kind == "armored" then renderable.borderColor = {0.85, 0.93, 1} end
-    if definition.kind == "unbreakable" then
-        renderable.borderColor, renderable.labelColor = {0.65, 0.73, 0.82}, {0.85, 0.90, 0.95}
+function Bricks.firstHit(bricks, ball)
+    local index, axis
+    local nearest = math.huge
+    for i, brick in ipairs(bricks) do
+        local time, hitAxis = Collision.sweep(ball, brick, ball.vx, ball.vy)
+        if time and time < nearest then
+            index, nearest, axis = i, time, hitAxis
+        end
     end
-    local data = {
-        Position = Components.position(spec.x, spec.y),
-        Collider = Components.collider(spec.w, spec.h),
-        Renderable = renderable,
-        Brick = Components.brick(config, spec, level),
-        Health = Components.health(health),
-        ScoreValue = Components.scoreValue(config.SCORE_VALUES[definition.kind]),
-        BrickBehavior = Components.brickBehavior(definition),
-    }
-    if definition.kind == "unbreakable" then
-        data.Health, data.ScoreValue = nil, nil
-        data.Brick.dropChance = 0
-    end
-    if spec.row and spec.column then data.GridPosition = {row = spec.row, column = spec.column} end
-    if definition.kind == "ghost" then
-        data.Ghost = Components.ghost(definition)
-        renderable.alpha = data.Ghost.solid and 1 or 0.22
-    end
-    if spec.support then
-        data.BossSupport = spec.support
-        data.ScoreValue.points = 0 -- Conserva el sorteo de poderes del nivel, sin puntos ni combo.
-    end
-    if definition.kind == "moving" then
-        data.Motion = Components.motion(spec.x, spec.y, definition.motion)
-        data.Velocity = Components.velocity(0, 0)
-    end
-    return world:create(data)
+    return index, nearest, axis
 end
 
-function Bricks.remaining(world)
-    return #world:query("Brick", "Health")
-end
-
-function Bricks.destroy(game, id)
-    if not game.world:has(id, "Brick") then return false end
-    if game.world:get(id, "Brick").kind == "unbreakable" then return false end
-    Score.award(game, id)
-    local p, c, visual = game.world:get(id, "Position"), game.world:get(id, "Collider"), game.world:get(id, "Renderable")
-    if game.world:get(id, "Brick").kind ~= "explosive" then
-        Feedback.emit(game, "brick", p.x + c.w / 2, p.y + c.h / 2, visual.color)
+function Bricks.draw(bricks)
+    for _, brick in ipairs(bricks) do
+        love.graphics.setColor(brick.color)
+        love.graphics.rectangle("fill", brick.x, brick.y, brick.w, brick.h)
     end
-    game.world:destroy(id)
-    game.remaining = Bricks.remaining(game.world)
-    if game.remaining == 0 then
-        game:completeLevel()
-    end
-    return true
 end
 
 return Bricks

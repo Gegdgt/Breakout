@@ -1,30 +1,49 @@
--- Punto de entrada del proyecto.
-local Game = require("src.game")
-local game
+local Paddle = require("src.paddle")
+local Ball = require("src.ball")
+local Bricks = require("src.bricks")
+
+local width, height
+local paddle, ball, bricks
+local finished
 
 function love.load()
-    game = Game.new()
+    width, height = love.window.getMode()
+    paddle = Paddle.new(width, height)
+    ball = Ball.new(width, paddle.y)
+    bricks = Bricks.new(width)
+    finished = false
+end
+
+local function finish(message)
+    finished = true
+    print(message)
+    love.event.quit()
 end
 
 function love.update(dt)
-    game:update(dt)
+    if finished then return end
+
+    local inputVelocity = Paddle.inputVelocity(paddle)
+    while dt > 0 do
+        -- Avanzar hasta el primer impacto o hasta agotar el tiempo del frame.
+        local paddleVelocity, time = Paddle.motion(paddle, inputVelocity, width, dt)
+        local elapsed, lost = Ball.move(ball, paddle, paddleVelocity, bricks, width, height, time)
+        Paddle.move(paddle, paddleVelocity, width, elapsed)
+
+        if lost then
+            return finish("Game Over")
+        end
+        if #bricks == 0 then
+            return finish("You Win!")
+        end
+
+        dt = dt - elapsed
+    end
 end
 
 function love.draw()
-    game:draw()
-end
-
-function love.keypressed(key, scancode, isrepeat)
-    game:keypressed(key, isrepeat)
-end
-
-function love.focus(focused)
-    game:focus(focused)
-end
-
-function love.mousepressed(x, y, button) game:mousepressed(x, y, button) end
-function love.wheelmoved(x, y) game:wheelmoved(x, y) end
-
-function love.quit()
-    if game then game:quit() end
+    love.graphics.clear(0.055, 0.065, 0.09)
+    Bricks.draw(bricks)
+    Paddle.draw(paddle)
+    Ball.draw(ball)
 end
